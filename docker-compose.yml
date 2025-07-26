@@ -72,6 +72,22 @@ services:
     networks:
       - benchmark_network
 
+  csharp-app:
+    build:
+      context: ./csharp-app
+      dockerfile: Dockerfile
+    container_name: benchmark_csharp_app
+    ports:
+      - "8081:8080"
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=benchmark;Username=benchmark_user;Password=benchmark_pass;"
+      ASPNETCORE_ENVIRONMENT: Production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - benchmark_network
+
 volumes:
   postgres_data:
   prometheus_data:
