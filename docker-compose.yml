@@ -97,7 +97,7 @@ services:
 
   csharp-ef-app:
     build:
-      context: ./csharp-app
+      context: ./csharp-ef-app
       dockerfile: Dockerfile
     container_name: benchmark_csharp_ef_app
     ports:
