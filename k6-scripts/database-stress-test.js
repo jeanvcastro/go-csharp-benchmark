@@ -1,6 +1,6 @@
-import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { Rate, Trend, Counter } from 'k6/metrics';
+import http from 'k6/http';
+import { Counter, Rate, Trend } from 'k6/metrics';
 
 const errorRate = new Rate('errors');
 const responseTime = new Trend('response_time');
@@ -12,7 +12,7 @@ export const options = {
             executor: 'constant-vus',
             vus: 50,                    // 50 concurrent connections
             duration: '10m',            // 10 minutes stress test
-            gracefulRampDown: '30s',
+            gracefulStop: '30s',
         },
     },
     thresholds: {
@@ -121,19 +121,22 @@ function complexWriteOperations(baseUrl) {
     responseTime.add(userResponse.timings.duration);
     
     if (userResponse.status === 201) {
+        let user = null;
         try {
-            const user = JSON.parse(userResponse.body || '{}');
+            user = JSON.parse(userResponse.body || '{}');
             if (user.id) {
                 createdUsers.push(user);
             }
         } catch (e) {
             console.log('Error parsing user response:', e);
+            return;
         }
         
         // Immediately create multiple orders for this user
-        for (let i = 0; i < 3; i++) {
-            const orderData = {
-                user_id: user.id,
+        if (user && user.id) {
+            for (let i = 0; i < 3; i++) {
+                const orderData = {
+                    user_id: user.id,
                 order_items: [
                     {
                         product_name: `Stress Product ${i}-${Math.floor(Math.random() * 100)}`,
@@ -170,6 +173,7 @@ function complexWriteOperations(baseUrl) {
                 }
             }
         }
+    }
     }
 }
 

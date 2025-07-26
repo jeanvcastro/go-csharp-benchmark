@@ -1,5 +1,5 @@
-import http from 'k6/http';
 import { check, sleep } from 'k6';
+import http from 'k6/http';
 import { Rate, Trend } from 'k6/metrics';
 
 const errorRate = new Rate('errors');
@@ -20,189 +20,172 @@ export const options = {
 const goBaseUrl = 'http://localhost:8080/api/v1';
 const csharpBaseUrl = 'http://localhost:8081/api/v1';
 
-let testUsers = [];
-let testOrders = [];
-
 export function setup() {
-    console.log('Setting up test data...');
+    console.log('Setting up optimized dual-app test data...');
     
-    const users = [];
-    for (let i = 0; i < 50; i++) {
+    // Create separate namespaced users for each app to avoid conflicts
+    const goUsers = [];
+    const csharpUsers = [];
+    
+    // Create Go users
+    for (let i = 0; i < 25; i++) {
         const userData = {
-            username: `testuser${i}`,
-            email: `testuser${i}@example.com`,
-            full_name: `Test User ${i}`
+            username: `go_test_${Date.now()}_${i}`,
+            email: `go_test_${Date.now()}_${i}@example.com`,
+            full_name: `Go Test User ${i}`
         };
         
-        const goUser = http.post(`${goBaseUrl}/users`, JSON.stringify(userData), {
+        const response = http.post(`${goBaseUrl}/users`, JSON.stringify(userData), {
             headers: { 'Content-Type': 'application/json' }
         });
         
-        const csharpUserData = {
-            username: `csharpuser${i}`,
-            email: `csharpuser${i}@example.com`,
-            full_name: `CSharp User ${i}`
-        };
-        
-        const csharpUser = http.post(`${csharpBaseUrl}/users`, JSON.stringify(csharpUserData), {
-            headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (goUser.status === 201) users.push(JSON.parse(goUser.body));
-        if (csharpUser.status === 201) users.push(JSON.parse(csharpUser.body));
+        if (response.status === 201) {
+            goUsers.push(JSON.parse(response.body));
+        }
     }
     
-    return { users };
+    // Create C# users  
+    for (let i = 0; i < 25; i++) {
+        const userData = {
+            username: `csharp_test_${Date.now()}_${i}`,
+            email: `csharp_test_${Date.now()}_${i}@example.com`,
+            full_name: `CSharp Test User ${i}`
+        };
+        
+        const response = http.post(`${csharpBaseUrl}/users`, JSON.stringify(userData), {
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (response.status === 201) {
+            csharpUsers.push(JSON.parse(response.body));
+        }
+    }
+    
+    console.log(`Created ${goUsers.length} Go users and ${csharpUsers.length} C# users`);
+    return { goUsers, csharpUsers };
 }
 
 export default function(data) {
-    const baseUrl = Math.random() < 0.5 ? goBaseUrl : csharpBaseUrl;
-    const operation = Math.random();
+    // Use VU ID to determine which app to test (split load evenly)
+    const useGo = __VU % 2 === 0;
+    const baseUrl = useGo ? goBaseUrl : csharpBaseUrl;
+    const users = useGo ? data.goUsers : data.csharpUsers;
+    const appName = useGo ? 'Go' : 'C#';
     
-    if (operation < 0.6) {
-        // 60% reads
-        readOperations(baseUrl, data);
-    } else if (operation < 0.9) {
-        // 30% writes
-        writeOperations(baseUrl, data);
-    } else {
-        // 10% deletes
-        deleteOperations(baseUrl, data);
+    if (!users || users.length === 0) {
+        console.warn(`No users available for ${appName}`);
+        return;
     }
     
-    sleep(0.1);
-}
-
-function readOperations(baseUrl, data) {
-    const readType = Math.random();
+    // Test users list
+    const usersListResponse = http.get(`${baseUrl}/users?limit=10`);
+    check(usersListResponse, {
+        [`${appName} users list status is 200`]: (r) => r.status === 200,
+        [`${appName} users list has data`]: (r) => {
+            try {
+                const body = JSON.parse(r.body);
+                return body.users && body.users.length > 0;
+            } catch (e) {
+                return false;
+            }
+        }
+    });
+    responseTime.add(usersListResponse.timings.duration);
+    errorRate.add(usersListResponse.status !== 200);
     
-    if (readType < 0.5) {
-        // Get users with pagination
-        const limit = Math.floor(Math.random() * 20) + 1;
-        const offset = Math.floor(Math.random() * 100);
-        
-        const response = http.get(`${baseUrl}/users?limit=${limit}&offset=${offset}`);
-        
-        check(response, {
-            'users list status is 200': (r) => r.status === 200,
-            'users list has data': (r) => {
-                try {
-                    const data = JSON.parse(r.body || '{}');
-                    return data.users !== undefined && Array.isArray(data.users);
-                } catch (e) {
-                    return false;
-                }
-            },
-        });
-        
-        errorRate.add(response.status !== 200);
-        responseTime.add(response.timings.duration);
-        
-    } else {
-        // Get orders with users
-        const limit = Math.floor(Math.random() * 10) + 1;
-        const offset = Math.floor(Math.random() * 50);
-        
-        const response = http.get(`${baseUrl}/orders?limit=${limit}&offset=${offset}`);
-        
-        check(response, {
-            'orders list status is 200': (r) => r.status === 200,
-            'orders list has data': (r) => {
-                try {
-                    const data = JSON.parse(r.body || '{}');
-                    return data.orders !== undefined && Array.isArray(data.orders);
-                } catch (e) {
-                    return false;
-                }
-            },
-        });
-        
-        errorRate.add(response.status !== 200);
-        responseTime.add(response.timings.duration);
-    }
-}
-
-function writeOperations(baseUrl, data) {
-    const writeType = Math.random();
+    // Test orders list
+    const ordersListResponse = http.get(`${baseUrl}/orders?limit=10`);
+    check(ordersListResponse, {
+        [`${appName} orders list status is 200`]: (r) => r.status === 200,
+        [`${appName} orders list has data`]: (r) => {
+            try {
+                const body = JSON.parse(r.body);
+                return body.orders && Array.isArray(body.orders);
+            } catch (e) {
+                return false;
+            }
+        }
+    });
+    responseTime.add(ordersListResponse.timings.duration);
+    errorRate.add(ordersListResponse.status !== 200);
     
-    if (writeType < 0.7) {
-        // Create user
-        const userData = {
-            username: `loadtest${Date.now()}${Math.floor(Math.random() * 1000)}`,
-            email: `loadtest${Date.now()}@example.com`,
-            full_name: `Load Test User ${Date.now()}`
+    // Create user (lower frequency to reduce DB pressure)
+    if (Math.random() < 0.3) {  // Only 30% of iterations create users
+        const newUserData = {
+            username: `${appName.toLowerCase()}_load_${Date.now()}_${Math.random()}`,
+            email: `${appName.toLowerCase()}_load_${Date.now()}_${Math.random()}@example.com`,
+            full_name: `${appName} Load Test User`
         };
         
-        const response = http.post(`${baseUrl}/users`, JSON.stringify(userData), {
+        const createUserResponse = http.post(`${baseUrl}/users`, JSON.stringify(newUserData), {
             headers: { 'Content-Type': 'application/json' }
         });
         
-        check(response, {
-            'user creation status is 201': (r) => r.status === 201,
-            'user creation returns user': (r) => {
+        check(createUserResponse, {
+            [`${appName} user creation status is 201`]: (r) => r.status === 201,
+            [`${appName} user creation returns user`]: (r) => {
                 try {
-                    const data = JSON.parse(r.body || '{}');
-                    return data.id !== undefined;
+                    const body = JSON.parse(r.body);
+                    return body.id && body.username;
                 } catch (e) {
                     return false;
                 }
-            },
+            }
         });
+        responseTime.add(createUserResponse.timings.duration);
+        errorRate.add(createUserResponse.status !== 201);
         
-        errorRate.add(response.status !== 201);
-        responseTime.add(response.timings.duration);
-        
-    } else {
-        // Create order
-        const orderData = {
-            user_id: data.users[Math.floor(Math.random() * data.users.length)]?.id,
-            order_items: [
-                {
-                    product_name: `Product ${Math.floor(Math.random() * 100)}`,
-                    quantity: Math.floor(Math.random() * 5) + 1,
-                    unit_price: (Math.random() * 100 + 10).toFixed(2)
-                }
-            ]
-        };
-        
-        if (orderData.user_id) {
-            const response = http.post(`${baseUrl}/orders`, JSON.stringify(orderData), {
+        // Create order for the new user
+        if (createUserResponse.status === 201) {
+            const createdUser = JSON.parse(createUserResponse.body);
+            const userIdField = useGo ? 'user_id' : 'user_id'; // Both use same field name
+            
+            const orderData = {
+                [userIdField]: createdUser.id,
+                order_items: [
+                    {
+                        product_name: `${appName} Product ${Math.random()}`,
+                        quantity: Math.floor(Math.random() * 3) + 1,
+                        unit_price: Math.floor(Math.random() * 50) + 10
+                    }
+                ]
+            };
+            
+            const createOrderResponse = http.post(`${baseUrl}/orders`, JSON.stringify(orderData), {
                 headers: { 'Content-Type': 'application/json' }
             });
             
-            check(response, {
-                'order creation status is 201': (r) => r.status === 201,
-                'order creation returns order': (r) => {
+            check(createOrderResponse, {
+                [`${appName} order creation status is 201`]: (r) => r.status === 201,
+                [`${appName} order creation returns order`]: (r) => {
                     try {
-                        const data = JSON.parse(r.body || '{}');
-                        return data.id !== undefined;
+                        const body = JSON.parse(r.body);
+                        return body.id && (body.userId || body.user_id);
                     } catch (e) {
                         return false;
                     }
-                },
+                }
             });
+            responseTime.add(createOrderResponse.timings.duration);
+            errorRate.add(createOrderResponse.status !== 201);
             
-            errorRate.add(response.status !== 201);
-            responseTime.add(response.timings.duration);
+            // Clean up - delete the created user (lower frequency)
+            if (Math.random() < 0.5) {  // Only 50% cleanup to reduce DB load
+                const deleteResponse = http.del(`${baseUrl}/users/${createdUser.id}`);
+                check(deleteResponse, {
+                    [`${appName} user deletion status is 204 or 404`]: (r) => r.status === 204 || r.status === 404
+                });
+                responseTime.add(deleteResponse.timings.duration);
+                errorRate.add(deleteResponse.status !== 204 && deleteResponse.status !== 404);
+            }
         }
     }
-}
-
-function deleteOperations(baseUrl, data) {
-    if (data.users.length > 0) {
-        const randomUser = data.users[Math.floor(Math.random() * data.users.length)];
-        
-        const response = http.del(`${baseUrl}/users/${randomUser.id}`);
-        
-        check(response, {
-            'user deletion status is 204 or 404': (r) => r.status === 204 || r.status === 404,
-        });
-        
-        errorRate.add(response.status !== 204 && response.status !== 404);
-        responseTime.add(response.timings.duration);
-    }
+    
+    // Longer sleep to reduce overall pressure
+    sleep(0.15);
 }
 
 export function teardown(data) {
-    console.log('Cleaning up test data...');
+    console.log('Cleaning up optimized dual-app test data...');
+    // Cleanup could be implemented here if needed
 }

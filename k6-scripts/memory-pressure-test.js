@@ -1,6 +1,6 @@
-import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { Rate, Trend, Counter } from 'k6/metrics';
+import http from 'k6/http';
+import { Counter, Rate, Trend } from 'k6/metrics';
 
 const errorRate = new Rate('errors');
 const responseTime = new Trend('response_time');

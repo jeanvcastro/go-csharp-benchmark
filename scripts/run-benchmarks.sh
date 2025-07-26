@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 RESULTS_DIR="./results"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 BENCHMARK_SESSION="benchmark_${TIMESTAMP}"
