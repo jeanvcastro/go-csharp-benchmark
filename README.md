@@ -1,6 +1,6 @@
 # 🚀 Language Performance Benchmark
 
-Benchmark completo comparando performance entre **Go** e **C#** em cenários reais de produção, medindo latência, throughput, consumo de recursos e eficiência de acesso a dados. A aplicação C# é testada com **Entity Framework** e **Dapper** para análise comparativa de ORMs.
+Benchmark completo comparando performance entre **Go** e **C#** em cenários reais de produção, medindo latência, throughput, consumo de recursos e eficiência de acesso a dados. A aplicação C# é testada com **Entity Framework** e **Dapper** (micro-ORM) para análise comparativa de ORMs.
 
 ## 🏗️ Arquitetura
 
@@ -27,30 +27,28 @@ Benchmark completo comparando performance entre **Go** e **C#** em cenários rea
 
 ### 📊 Cenários de Benchmark
 
-1. **API Load Test** - Teste de carga com 1000 req/s
-   - 60% operações de leitura
-   - 30% operações de escrita
-   - 10% operações de exclusão
+1. **API Load Test** - Teste de carga progressiva (7min)
+   - Ramp up: 1min → 100 VUs
+   - Sustentado: 5min → 1000 VUs (distribuído entre 3 apps)
+   - Ramp down: 1min → 0 VUs
+   - Operações: 70% leitura, 30% escrita com criação de orders
+   - Threshold: p95 < 500ms, erro < 5%
 
-2. **Database Stress Test** - Teste de estresse do banco
-   - 50 conexões concorrentes
-   - Operações CRUD intensivas
-   - Análise de pool de conexões
+2. **Database Stress Test** - Estresse intensivo de BD (10min)
+   - 50 conexões concorrentes constantes
+   - 40% operações de leitura complexas com JOINs
+   - 30% transações de escrita (usuário + múltiplos pedidos)
+   - 15% operações em lote (batch)
+   - 15% estresse do pool de conexões
+   - Threshold: p95 < 1s, erro < 10%
 
-3. **Memory Pressure Test** - Teste de pressão de memória
-   - Payloads grandes
-   - Stress do Garbage Collector
-   - Análise de vazamentos de memória
-
-### 🏆 Resultados dos Últimos Benchmarks
-
-| Aplicação | API Load (ms) | DB Stress (ms) | Memory Test (ms) | Erro Rate |
-|-----------|---------------|----------------|------------------|-----------|
-| **Go** | 308.90 | 1.66 | 2.34 | 0.00% - 18.66% |
-| **C# Entity Framework** | 384.82 | 4.79 | 3.76 | 0.00% - 5.95% |
-| **C# Dapper** | 349.06 | 4.98 | 3.68 | 0.00% - 6.39% |
-
-*📈 Relatório completo disponível em `results/*/reports/benchmark_comparison_report.md`*
+3. **Memory Pressure Test** - Pressão de memória e GC (14min)
+   - Ramp progressivo: 1 → 10 → 25 → 50 VUs
+   - 30% payloads grandes (usuários com dados extensos)
+   - 30% alocação/desalocação rápida (stress do GC)
+   - 20% consultas com resultados grandes (100+ registros)
+   - 20% operações em lote com dados volumosos
+   - Threshold: p95 < 2s, erro < 15%
 
 ## 🚦 Quick Start
 

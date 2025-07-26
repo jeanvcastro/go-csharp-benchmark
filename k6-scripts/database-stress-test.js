@@ -22,7 +22,7 @@ export const options = {
         database_stress: {
             executor: 'constant-vus',
             vus: 50,                    // 50 concurrent connections
-            duration: '30s',            // 10 minutes stress test
+            duration: '10m',            // 10 minutes stress test
             gracefulStop: '30s',
         },
     },

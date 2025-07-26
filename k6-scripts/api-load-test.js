@@ -32,12 +32,9 @@ function trackMetrics(appChoice, response) {
 
 export const options = {
     stages: [
-        // { duration: '1m', target: 100 },   // Ramp up
-        // { duration: '5m', target: 1000 },  // Stay at 1000 RPS
-        // { duration: '1m', target: 0 },     // Ramp down
-        { duration: '10s', target: 100 },   // Ramp up
-        { duration: '40s', target: 1000 },  // Stay at 1000 RPS
-        { duration: '10s', target: 0 },     // Ramp down
+        { duration: '1m', target: 100 },   // Ramp up
+        { duration: '5m', target: 1000 },  // Stay at 1000 RPS
+        { duration: '1m', target: 0 },     // Ramp down
     ],
     thresholds: {
         http_req_duration: ['p(95)<500'],  // 95% requests under 500ms

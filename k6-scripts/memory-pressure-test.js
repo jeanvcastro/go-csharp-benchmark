@@ -23,10 +23,10 @@ export const options = {
             executor: 'ramping-vus',
             startVUs: 1,
             stages: [
-                { duration: '10s', target: 10 },   // Gradual ramp up
-                { duration: '25s', target: 25 },   // Memory pressure phase
-                { duration: '50s', target: 50 },   // High memory pressure
-                { duration: '20s', target: 0 },    // Cool down
+                { duration: '2m', target: 10 },   // Gradual ramp up
+                { duration: '5m', target: 25 },   // Memory pressure phase
+                { duration: '5m', target: 50 },   // High memory pressure
+                { duration: '2m', target: 0 },    // Cool down
             ],
         },
     },
