@@ -3,12 +3,8 @@ using PerformanceBenchmark.Data.Models;
 
 namespace PerformanceBenchmark.Data;
 
-public class BenchmarkDbContext : DbContext
+public class BenchmarkDbContext(DbContextOptions<BenchmarkDbContext> options) : DbContext(options)
 {
-    public BenchmarkDbContext(DbContextOptions<BenchmarkDbContext> options) : base(options)
-    {
-    }
-
     public DbSet<User> Users { get; set; }
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
