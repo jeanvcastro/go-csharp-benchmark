@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: benchmark_postgres
+    environment:
+      POSTGRES_DB: benchmark
+      POSTGRES_USER: benchmark_user
+      POSTGRES_PASSWORD: benchmark_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/seed-data.sql:/docker-entrypoint-initdb.d/seed-data.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U benchmark_user -d benchmark"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - benchmark_network
+
+  prometheus:
+    image: prom/prometheus:v2.47.2
+    container_name: benchmark_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - benchmark_network
+
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: benchmark_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_USERS_ALLOW_SIGN_UP: false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - benchmark_network
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  benchmark_network:
+    driver: bridge
