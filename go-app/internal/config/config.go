@@ -38,9 +38,9 @@ func Load() *Config {
 			User:            getEnv("DB_USER", "benchmark_user"),
 			Password:        getEnv("DB_PASSWORD", "benchmark_pass"),
 			Database:        getEnv("DB_NAME", "benchmark"),
-			MaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 25),
-			MaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 5),
-			ConnMaxLifetime: getEnvAsInt("DB_CONN_MAX_LIFETIME", 300),
+			MaxOpenConns:    getEnvAsInt("DB_MAX_CONNECTIONS", 100),
+			MaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNECTIONS", 10),
+			ConnMaxLifetime: getEnvAsInt("DB_CONNECTION_MAX_LIFETIME", 300),
 		},
 	}
 }
