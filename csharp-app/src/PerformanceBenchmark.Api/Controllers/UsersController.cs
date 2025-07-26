@@ -8,24 +8,25 @@ namespace PerformanceBenchmark.Api.Controllers;
 [Route("api/v1/[controller]")]
 public class UsersController : ControllerBase
 {
-    private readonly UserService _userService;
+    private readonly IUserRepository _userRepository;
 
-    public UsersController(UserService userService)
+    public UsersController(IUserRepository userRepository)
     {
-        _userService = userService;
+        _userRepository = userRepository;
     }
 
     [HttpGet]
     public async Task<ActionResult<object>> GetUsers([FromQuery] int limit = 10, [FromQuery] int offset = 0)
     {
-        var users = await _userService.GetUsersAsync(limit, offset);
+        if (limit > 100) limit = 100;
+        var users = await _userRepository.GetUsersAsync(limit, offset);
         return Ok(new { users, limit, offset });
     }
 
     [HttpGet("{id}")]
     public async Task<ActionResult<User>> GetUser(Guid id)
     {
-        var user = await _userService.GetUserByIdAsync(id);
+        var user = await _userRepository.GetUserByIdAsync(id);
         if (user == null)
         {
             return NotFound(new { error = "user not found" });
@@ -38,7 +39,7 @@ public class UsersController : ControllerBase
     {
         try
         {
-            var user = await _userService.CreateUserAsync(request);
+            var user = await _userRepository.CreateUserAsync(request);
             return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
         }
         catch (Exception ex)
@@ -52,7 +53,7 @@ public class UsersController : ControllerBase
     {
         try
         {
-            var user = await _userService.UpdateUserAsync(id, request);
+            var user = await _userRepository.UpdateUserAsync(id, request);
             if (user == null)
             {
                 return NotFound(new { error = "user not found" });
@@ -70,7 +71,7 @@ public class UsersController : ControllerBase
     {
         try
         {
-            var deleted = await _userService.DeleteUserAsync(id);
+            var deleted = await _userRepository.DeleteUserAsync(id);
             if (!deleted)
             {
                 return NotFound(new { error = "user not found" });

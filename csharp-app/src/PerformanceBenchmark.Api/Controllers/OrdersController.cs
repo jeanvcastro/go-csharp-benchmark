@@ -8,24 +8,25 @@ namespace PerformanceBenchmark.Api.Controllers;
 [Route("api/v1/[controller]")]
 public class OrdersController : ControllerBase
 {
-    private readonly OrderService _orderService;
+    private readonly IOrderRepository _orderRepository;
 
-    public OrdersController(OrderService orderService)
+    public OrdersController(IOrderRepository orderRepository)
     {
-        _orderService = orderService;
+        _orderRepository = orderRepository;
     }
 
     [HttpGet]
     public async Task<ActionResult<object>> GetOrders([FromQuery] int limit = 10, [FromQuery] int offset = 0)
     {
-        var orders = await _orderService.GetOrdersAsync(limit, offset);
+        if (limit > 100) limit = 100;
+        var orders = await _orderRepository.GetOrdersWithUsersAsync(limit, offset);
         return Ok(new { orders, limit, offset });
     }
 
     [HttpGet("{id}")]
     public async Task<ActionResult<Order>> GetOrder(Guid id)
     {
-        var order = await _orderService.GetOrderByIdAsync(id);
+        var order = await _orderRepository.GetOrderByIdAsync(id);
         if (order == null)
         {
             return NotFound(new { error = "order not found" });
@@ -38,7 +39,7 @@ public class OrdersController : ControllerBase
     {
         try
         {
-            var order = await _orderService.CreateOrderAsync(request);
+            var order = await _orderRepository.CreateOrderAsync(request);
             return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
         }
         catch (Exception ex)
