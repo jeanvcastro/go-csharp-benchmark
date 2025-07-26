@@ -16,51 +16,15 @@ check_docker() {
     fi
 }
 
-setup_python_environment() {
-    echo "🐍 Configurando ambiente Python..."
+build_analysis_image() {
+    echo "🐍 Preparando imagem Docker para análise..."
     
-    # Check if Python is already configured (skip if working)
-    if python3 -c "import pandas, matplotlib, seaborn" &> /dev/null; then
-        echo "✅ Python já configurado com todas as dependências"
-        return 0
-    fi
-    
-    # Check if pyenv is available
-    if command -v pyenv &> /dev/null; then
-        echo "✅ pyenv encontrado"
-        
-        # Install Python version if not available
-        PYTHON_VERSION=$(cat .python-version 2>/dev/null || echo "3.11.6")
-        if ! pyenv versions --bare | grep -q "^${PYTHON_VERSION}$"; then
-            echo "📦 Instalando Python ${PYTHON_VERSION}..."
-            pyenv install ${PYTHON_VERSION}
-        fi
-        
-        # Set local Python version
-        pyenv local ${PYTHON_VERSION}
-        echo "✅ Python ${PYTHON_VERSION} configurado"
+    if docker images | grep -q "benchmark_analysis"; then
+        echo "✅ Imagem de análise já existe"
     else
-        echo "⚠️  pyenv não encontrado, usando Python do sistema"
-        if ! command -v python3 &> /dev/null; then
-            echo "❌ Python 3 não está instalado"
-            echo "💡 Para configuração avançada Python, use: ./scripts/setup-python.sh"
-            echo "Instale Python 3.11+ ou pyenv:"
-            echo "  brew install pyenv python3  # macOS"
-            echo "  apt install python3 python3-pip  # Ubuntu"
-            exit 1
-        fi
-    fi
-    
-    # Install/upgrade pip
-    python3 -m pip install --upgrade pip
-    
-    # Install requirements
-    if [ -f "requirements.txt" ]; then
-        echo "📦 Instalando dependências Python..."
-        python3 -m pip install -r requirements.txt
-        echo "✅ Dependências Python instaladas"
-    else
-        echo "⚠️  requirements.txt não encontrado"
+        echo "📦 Buildando imagem de análise..."
+        docker build -t benchmark_analysis scripts/analysis/
+        echo "✅ Imagem de análise criada"
     fi
 }
 
@@ -182,7 +146,7 @@ main() {
     echo ""
     
     check_docker
-    setup_python_environment
+    build_analysis_image
     cleanup_existing
     start_infrastructure
     verify_services

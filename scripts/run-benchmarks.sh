@@ -20,8 +20,8 @@ check_prerequisites() {
         exit 1
     fi
     
-    if ! command -v python3 &> /dev/null; then
-        echo "❌ python3 is not installed"
+    if ! docker images | grep -q "benchmark_analysis"; then
+        echo "❌ Analysis Docker image not found. Run ./scripts/setup.sh first"
         exit 1
     fi
     
@@ -143,8 +143,8 @@ generate_reports() {
     echo ""
     echo "📈 Generating analysis reports..."
     
-    if [ -f "./scripts/analyze-results.py" ]; then
-        python3 ./scripts/analyze-results.py "${RESULTS_DIR}/${BENCHMARK_SESSION}"
+    if [ -f "./scripts/analysis/analyze-results.py" ]; then
+        docker run --rm -v "$(pwd)/${RESULTS_DIR}/${BENCHMARK_SESSION}:/results" benchmark_analysis
         echo "✅ Analysis report generated"
     else
         echo "⚠️  Analysis script not found, skipping detailed analysis"

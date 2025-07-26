@@ -139,6 +139,17 @@ services:
     networks:
       - benchmark_network
 
+  analysis:
+    build:
+      context: ./scripts/analysis
+      dockerfile: Dockerfile
+    container_name: benchmark_analysis
+    volumes:
+      - ./results:/results
+      - ./results/reports:/reports
+    profiles:
+      - analysis
+
 volumes:
   postgres_data:
   prometheus_data:
