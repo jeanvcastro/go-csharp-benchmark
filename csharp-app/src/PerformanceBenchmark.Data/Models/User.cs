@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace PerformanceBenchmark.Data.Models;
 
 public class User
@@ -9,13 +11,19 @@ public class User
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     
+    [JsonIgnore]
     public ICollection<Order> Orders { get; set; } = new List<Order>();
 }
 
 public class CreateUserRequest
 {
+    [JsonPropertyName("username")]
     public string Username { get; set; } = string.Empty;
+    
+    [JsonPropertyName("email")]
     public string Email { get; set; } = string.Empty;
+    
+    [JsonPropertyName("full_name")]
     public string FullName { get; set; } = string.Empty;
 }
 

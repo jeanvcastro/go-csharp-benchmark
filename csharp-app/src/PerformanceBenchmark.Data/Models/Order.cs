@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace PerformanceBenchmark.Data.Models;
 
 public class Order
@@ -24,18 +26,27 @@ public class OrderItem
     public decimal TotalPrice { get; set; }
     public DateTime CreatedAt { get; set; }
     
+    [JsonIgnore]
     public Order Order { get; set; } = null!;
 }
 
 public class CreateOrderRequest
 {
+    [JsonPropertyName("user_id")]
     public Guid UserId { get; set; }
+    
+    [JsonPropertyName("order_items")]
     public List<CreateOrderItemRequest> OrderItems { get; set; } = new();
 }
 
 public class CreateOrderItemRequest
 {
+    [JsonPropertyName("product_name")]
     public string ProductName { get; set; } = string.Empty;
+    
+    [JsonPropertyName("quantity")]
     public int Quantity { get; set; }
+    
+    [JsonPropertyName("unit_price")]
     public decimal UnitPrice { get; set; }
 }
