@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace PerformanceBenchmark.Api.Middleware;
 
 public class TimingMiddleware
@@ -13,13 +11,11 @@ public class TimingMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        var stopwatch = Stopwatch.StartNew();
-
+        var timestamp = DateTime.Now.ToString("yyyy/MM/dd - HH:mm:ss");
+        
         await _next(context);
 
-        stopwatch.Stop();
-
-        // Simple timing log like Go's RequestTimingMiddleware
-        Console.WriteLine($"Request: {context.Request.Method} {context.Request.Path} | Status: {context.Response.StatusCode} | Latency: {stopwatch.ElapsedMilliseconds}ms");
+        // Log format similar to Go's TimingMiddleware
+        Console.WriteLine($"[{timestamp}] {context.Request.Method} {context.Request.Path} {context.Response.StatusCode} {context.Connection.RemoteIpAddress}");
     }
 }

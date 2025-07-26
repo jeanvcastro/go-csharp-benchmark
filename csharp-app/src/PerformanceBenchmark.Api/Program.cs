@@ -41,7 +41,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Three middlewares like Go  
 app.UseMiddleware<TimingMiddleware>();
+app.UseMiddleware<MetricsMiddleware>();
+app.UseMiddleware<RequestTimingMiddleware>();
 
 app.UseMetricServer();
 
