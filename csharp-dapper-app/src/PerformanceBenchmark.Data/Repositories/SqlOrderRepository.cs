@@ -90,6 +90,7 @@ public class SqlOrderRepository : IOrderRepository
     public async Task<Order> CreateOrderAsync(CreateOrderRequest request)
     {
         using var connection = new NpgsqlConnection(_connectionString);
+        await connection.OpenAsync();
         using var transaction = await connection.BeginTransactionAsync();
 
         try
