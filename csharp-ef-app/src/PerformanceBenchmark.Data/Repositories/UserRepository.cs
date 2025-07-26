@@ -37,7 +37,6 @@ public class UserRepository : IUserRepository
             Username = request.Username,
             Email = request.Email,
             FullName = request.FullName
-            // Let DB handle CreatedAt and UpdatedAt with defaults
         };
 
         _context.Users.Add(user);
@@ -56,8 +55,6 @@ public class UserRepository : IUserRepository
             user.Email = request.Email;
         if (!string.IsNullOrEmpty(request.FullName))
             user.FullName = request.FullName;
-
-        // Let DB handle UpdatedAt with trigger or default
 
         await _context.SaveChangesAsync();
         return user;

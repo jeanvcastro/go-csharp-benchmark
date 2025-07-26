@@ -22,7 +22,6 @@ builder.Services.AddDbContextPool<BenchmarkDbContext>(options =>
     .EnableServiceProviderCaching()
     .EnableThreadSafetyChecks(false));
 
-// EF Core repositories
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 
@@ -31,7 +30,6 @@ builder.Services.AddSingleton<SystemMetricsCollector>();
 var app = builder.Build();
 
 
-// Three middlewares like Go  
 app.UseMiddleware<TimingMiddleware>();
 app.UseMiddleware<MetricsMiddleware>();
 app.UseMiddleware<RequestTimingMiddleware>();

@@ -9,7 +9,6 @@ builder.Logging.ClearProviders();
 
 builder.Services.AddControllers();
 
-// SQL Direct repositories with Dapper (no EF)
 builder.Services.AddScoped<IUserRepository, SqlUserRepository>();
 builder.Services.AddScoped<IOrderRepository, SqlOrderRepository>();
 
@@ -18,7 +17,6 @@ builder.Services.AddSingleton<SystemMetricsCollector>();
 var app = builder.Build();
 
 
-// Three middlewares like Go  
 app.UseMiddleware<TimingMiddleware>();
 app.UseMiddleware<MetricsMiddleware>();
 app.UseMiddleware<RequestTimingMiddleware>();
