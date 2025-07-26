@@ -51,6 +51,27 @@ services:
     networks:
       - benchmark_network
 
+  go-app:
+    build:
+      context: ./go-app
+      dockerfile: Dockerfile
+    container_name: benchmark_go_app
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: benchmark_user
+      DB_PASSWORD: benchmark_pass
+      DB_NAME: benchmark
+      SERVER_PORT: 8080
+      SERVER_HOST: 0.0.0.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - benchmark_network
+
 volumes:
   postgres_data:
   prometheus_data:
