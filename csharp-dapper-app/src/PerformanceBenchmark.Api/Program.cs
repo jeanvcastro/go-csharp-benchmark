@@ -9,12 +9,6 @@ builder.Logging.ClearProviders();
 
 builder.Services.AddControllers();
 
-if (builder.Environment.IsDevelopment())
-{
-    builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddSwaggerGen();
-}
-
 // SQL Direct repositories with Dapper (no EF)
 builder.Services.AddScoped<IUserRepository, SqlUserRepository>();
 builder.Services.AddScoped<IOrderRepository, SqlOrderRepository>();
@@ -23,11 +17,6 @@ builder.Services.AddSingleton<SystemMetricsCollector>();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 
 // Three middlewares like Go  
 app.UseMiddleware<TimingMiddleware>();

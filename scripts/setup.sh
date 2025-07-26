@@ -103,15 +103,27 @@ start_infrastructure() {
         sleep 2
     done
     
-    echo "🔍 Verificando aplicação C#..."
-    csharp_ready=false
+    echo "🔍 Verificando aplicação C# EF..."
+    csharp_ef_ready=false
     for i in {1..30}; do
         if curl -s http://localhost:8081/health > /dev/null 2>&1; then
-            echo "✅ Aplicação C# está pronta"
-            csharp_ready=true
+            echo "✅ Aplicação C# EF está pronta"
+            csharp_ef_ready=true
             break
         fi
-        echo "    Aguardando C# app... (tentativa $i/30)"
+        echo "    Aguardando C# EF app... (tentativa $i/30)"
+        sleep 2
+    done
+    
+    echo "🔍 Verificando aplicação C# Dapper..."
+    csharp_dapper_ready=false
+    for i in {1..30}; do
+        if curl -s http://localhost:8082/health > /dev/null 2>&1; then
+            echo "✅ Aplicação C# Dapper está pronta"
+            csharp_dapper_ready=true
+            break
+        fi
+        echo "    Aguardando C# Dapper app... (tentativa $i/30)"
         sleep 2
     done
     
@@ -119,8 +131,12 @@ start_infrastructure() {
         echo "⚠️  Aplicação Go não está respondendo, verifique logs: docker-compose logs go-app"
     fi
     
-    if [ "$csharp_ready" = false ]; then
+    if [ "$csharp_ef_ready" = false ]; then
         echo "⚠️  Aplicação C# EF não está respondendo, verifique logs: docker-compose logs csharp-ef-app"
+    fi
+    
+    if [ "$csharp_dapper_ready" = false ]; then
+        echo "⚠️  Aplicação C# Dapper não está respondendo, verifique logs: docker-compose logs csharp-dapper-app"
     fi
 }
 

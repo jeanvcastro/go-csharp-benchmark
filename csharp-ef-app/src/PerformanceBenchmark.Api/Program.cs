@@ -10,12 +10,6 @@ builder.Logging.ClearProviders();
 
 builder.Services.AddControllers();
 
-if (builder.Environment.IsDevelopment())
-{
-    builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddSwaggerGen();
-}
-
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
                        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
@@ -36,11 +30,6 @@ builder.Services.AddSingleton<SystemMetricsCollector>();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 
 // Three middlewares like Go  
 app.UseMiddleware<TimingMiddleware>();
