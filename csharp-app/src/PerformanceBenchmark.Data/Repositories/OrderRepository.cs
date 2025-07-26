@@ -41,30 +41,34 @@ public class OrderRepository : IOrderRepository
             var orderNumber = $"ORD-{Guid.NewGuid().ToString()[..8]}";
             var totalAmount = request.OrderItems.Sum(item => item.UnitPrice * item.Quantity);
 
+            // Create order - let DB handle ID and timestamps
             var order = new Order
             {
                 Id = Guid.NewGuid(),
                 UserId = request.UserId,
                 OrderNumber = orderNumber,
                 TotalAmount = totalAmount,
-                Status = "pending",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                Status = "pending"
             };
 
-            var orderItems = request.OrderItems.Select(item => new OrderItem
-            {
-                Id = Guid.NewGuid(),
-                OrderId = order.Id,
-                ProductName = item.ProductName,
-                Quantity = item.Quantity,
-                UnitPrice = item.UnitPrice,
-                TotalPrice = item.UnitPrice * item.Quantity,
-                CreatedAt = DateTime.UtcNow
-            }).ToList();
-
             _context.Orders.Add(order);
-            _context.OrderItems.AddRange(orderItems);
+            await _context.SaveChangesAsync(); // Save order first to get ID
+
+            // Insert order items directly in loop like Go
+            foreach (var item in request.OrderItems)
+            {
+                var orderItem = new OrderItem
+                {
+                    Id = Guid.NewGuid(),
+                    OrderId = order.Id,
+                    ProductName = item.ProductName,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.UnitPrice,
+                    TotalPrice = item.UnitPrice * item.Quantity
+                };
+                _context.OrderItems.Add(orderItem);
+            }
+            
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
