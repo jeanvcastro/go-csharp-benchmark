@@ -1,1 +1,107 @@
-*.md
+# Results and temporary files
+results/
+*.log
+*.tmp
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Go
+go-app/vendor/
+go-app/*.exe
+go-app/*.exe~
+go-app/*.dll
+go-app/*.so
+go-app/*.dylib
+go-app/main
+go-app/go.sum
+
+# .NET / C#
+csharp-app/bin/
+csharp-app/obj/
+csharp-app/**/*.user
+csharp-app/**/*.userosscache
+csharp-app/**/*.sln.docstates
+csharp-app/.vs/
+csharp-app/packages/
+csharp-app/**/.vscode/
+csharp-app/**/appsettings.Development.json
+csharp-app/**/appsettings.Local.json
+
+# K6 output files
+k6-output/
+*.json.gz
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs and monitoring data
+logs/
+monitoring/data/
+prometheus_data/
+grafana_data/
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Certificates and keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Test coverage
+coverage/
+*.cover
+.coverage
+.coverage.*
+
+# Temporary analysis files
+analysis-temp/
+temp-metrics/
+
+# Node modules (if any JS tools are added)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS generated files
+.DS_Store?
+ehthumbs.db
+Icon?
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
