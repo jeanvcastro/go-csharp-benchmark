@@ -12,50 +12,72 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 
+def log_progress(message):
+    """Print with flush to ensure immediate output in Docker"""
+    print(message, flush=True)
+
 def load_k6_results(results_dir):
     """Load K6 JSON results from the benchmark session"""
     k6_results = {}
     k6_dir = Path(results_dir) / "k6-results"
     
     if not k6_dir.exists():
-        print(f"❌ K6 results directory not found: {k6_dir}")
+        log_progress(f"❌ K6 results directory not found: {k6_dir}")
         return k6_results
     
     for json_file in k6_dir.glob("*.json"):
         test_name = json_file.stem
-        print(f"📊 Loading K6 results for {test_name}...")
+        log_progress(f"📊 Loading K6 results for {test_name}...")
         
         try:
-            with open(json_file, 'r') as f:
-                lines = f.readlines()
-                
-            # Parse K6 JSON output (one JSON object per line) - with sampling for large files
+            # Process file in chunks to avoid memory issues
             metrics_data = []
-            total_lines = len(lines)
+            file_size = json_file.stat().st_size
             
-            # If file is large (>50MB), sample every 10th line for performance
-            step = 10 if json_file.stat().st_size > 50_000_000 else 1
+            # Determine sampling rate based on file size
+            if file_size > 1_000_000_000:  # > 1GB
+                step = 1000  # Sample every 1000th line
+            elif file_size > 500_000_000:  # > 500MB
+                step = 500   # Sample every 500th line
+            elif file_size > 100_000_000:  # > 100MB
+                step = 100   # Sample every 100th line
+            else:
+                step = 1
             
             if step > 1:
-                print(f"  📉 Large file detected, sampling every {step} lines")
+                log_progress(f"  📉 Large file detected ({file_size/1024/1024:.1f}MB), sampling every {step} lines")
             
-            for i, line in enumerate(lines):
-                if i % step != 0:  # Skip lines based on sampling
-                    continue
+            line_count = 0
+            progress_interval = 100000  # Log every 100k lines
+            with open(json_file, 'r') as f:
+                for line in f:  # Process line by line instead of loading all
+                    line_count += 1
                     
-                if line.strip():
-                    try:
-                        data = json.loads(line)
-                        if data.get('type') == 'Point':
-                            metrics_data.append(data)
-                    except json.JSONDecodeError:
+                    # Progress logging for large files
+                    if line_count % progress_interval == 0:
+                        log_progress(f"  📈 Processed {line_count:,} lines, collected {len(metrics_data):,} metrics")
+                    
+                    if line_count % step != 0:  # Skip lines based on sampling
                         continue
+                    
+                    # Limit total metrics to prevent memory overflow
+                    if len(metrics_data) >= 10000:  # Max 10k samples per test
+                        log_progress(f"  🛑 Reached 10k sample limit, stopping early")
+                        break
+                        
+                    if line.strip():
+                        try:
+                            data = json.loads(line)
+                            if data.get('type') == 'Point':
+                                metrics_data.append(data)
+                        except json.JSONDecodeError:
+                            continue
             
             k6_results[test_name] = metrics_data
-            print(f"  ✅ Loaded {len(metrics_data)} metric points")
+            log_progress(f"  ✅ Loaded {len(metrics_data)} metric points from {line_count:,} total lines")
             
         except Exception as e:
-            print(f"  ❌ Error loading {json_file}: {e}")
+            log_progress(f"  ❌ Error loading {json_file}: {e}")
     
     return k6_results
 
@@ -76,9 +98,11 @@ def calculate_stats(times):
 
 def analyze_response_times(k6_results):
     """Analyze response times from K6 results by application"""
+    log_progress("🔍 Analyzing response times by application...")
     analysis = {}
     
     for test_name, metrics in k6_results.items():
+        log_progress(f"  📊 Processing {test_name} with {len(metrics)} metrics...")
         # Analyze by application using the new separate metrics
         app_metrics = {
             'go': [],
@@ -455,42 +479,51 @@ def create_visualizations(response_times, throughput, output_dir):
 
 def main():
     if len(sys.argv) != 2:
-        print("Usage: python3 analyze-results.py <results_directory>")
+        log_progress("Usage: python3 analyze-results.py <results_directory>")
         sys.exit(1)
     
     results_dir = sys.argv[1]
     
     if not os.path.exists(results_dir):
-        print(f"❌ Results directory does not exist: {results_dir}")
+        log_progress(f"❌ Results directory does not exist: {results_dir}")
         sys.exit(1)
     
-    print("🔍 Analyzing benchmark results...")
-    print(f"Results directory: {results_dir}")
-    print()
+    log_progress("🔍 Analyzing benchmark results...")
+    log_progress(f"Results directory: {results_dir}")
+    log_progress("")
     
     # Create reports directory
+    log_progress("📁 Creating reports directory...")
     reports_dir = Path(results_dir) / "reports"
     reports_dir.mkdir(exist_ok=True)
     
     # Load and analyze K6 results
+    log_progress("📊 Starting K6 results analysis...")
     k6_results = load_k6_results(results_dir)
+    
+    log_progress("📈 Analyzing response times...")
     response_times = analyze_response_times(k6_results)
+    
+    log_progress("🚀 Analyzing throughput...")
     throughput = analyze_throughput(k6_results)
     
     # Load Prometheus metrics
+    log_progress("📊 Loading Prometheus metrics...")
     prometheus_data = load_prometheus_metrics(results_dir)
     
     # Generate reports
+    log_progress("📝 Generating comparison report...")
     report_file = generate_comparison_report(response_times, throughput, prometheus_data, reports_dir)
     
     # Create visualizations
+    log_progress("📊 Creating visualizations...")
     create_visualizations(response_times, throughput, reports_dir)
     
-    print()
-    print("📊 Analysis Complete!")
-    print(f"📂 Reports generated in: {reports_dir}")
-    print(f"📈 Main report: {report_file}")
-    print()
+    log_progress("")
+    log_progress("📊 Analysis Complete!")
+    log_progress(f"📂 Reports generated in: {reports_dir}")
+    log_progress(f"📈 Main report: {report_file}")
+    log_progress("")
 
 if __name__ == "__main__":
     main()
