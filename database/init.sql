@@ -29,16 +29,20 @@ CREATE TABLE order_items (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_created_at ON users(created_at);
+CREATE UNIQUE INDEX idx_users_username ON users(username);
+CREATE UNIQUE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_created_at ON users(created_at DESC);
+CREATE INDEX idx_users_id_created_at ON users(id, created_at);
 
 CREATE INDEX idx_orders_user_id ON orders(user_id);
 CREATE INDEX idx_orders_status ON orders(status);
-CREATE INDEX idx_orders_created_at ON orders(created_at);
-CREATE INDEX idx_orders_order_number ON orders(order_number);
+CREATE INDEX idx_orders_created_at ON orders(created_at DESC);
+CREATE UNIQUE INDEX idx_orders_order_number ON orders(order_number);
+CREATE INDEX idx_orders_user_id_created_at ON orders(user_id, created_at DESC);
+CREATE INDEX idx_orders_status_created_at ON orders(status, created_at DESC);
 
 CREATE INDEX idx_order_items_order_id ON order_items(order_id);
+CREATE INDEX idx_order_items_order_id_created_at ON order_items(order_id, created_at);
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
