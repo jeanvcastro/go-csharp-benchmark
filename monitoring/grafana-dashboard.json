@@ -1,0 +1,387 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Go vs C# Performance Benchmark",
+    "tags": ["benchmark", "performance", "go", "csharp"],
+    "style": "dark",
+    "timezone": "browser",
+    "editable": true,
+    "hideControls": false,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"],
+      "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+    },
+    "refresh": "5s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "HTTP Request Rate (Go vs C#)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"go-app\"}[1m])",
+            "legendFormat": "Go - {{method}} {{endpoint}}",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(http_requests_total{job=\"csharp-app\"}[1m])",
+            "legendFormat": "C# - {{method}} {{endpoint}}",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Requests/sec",
+            "show": true
+          }
+        ],
+        "xAxis": {
+          "show": true
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "HTTP Response Time P95 (Go vs C#)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"go-app\"}[5m]))",
+            "legendFormat": "Go P95",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"csharp-app\"}[5m]))",
+            "legendFormat": "C# P95",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Seconds",
+            "show": true,
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Memory Usage (Go vs C#)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "benchmark_memory_usage_bytes{job=\"go-app\", type=\"heap_alloc\"}",
+            "legendFormat": "Go Heap Allocated",
+            "refId": "A"
+          },
+          {
+            "expr": "benchmark_memory_usage_bytes{job=\"csharp-app\", type=\"working_set\"}",
+            "legendFormat": "C# Working Set",
+            "refId": "B"
+          },
+          {
+            "expr": "benchmark_memory_usage_bytes{job=\"csharp-app\", type=\"gc_heap\"}",
+            "legendFormat": "C# GC Heap",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Bytes",
+            "show": true,
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 4,
+        "title": "Active Connections (Go vs C#)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "http_active_connections{job=\"go-app\"}",
+            "legendFormat": "Go Active Connections",
+            "refId": "A"
+          },
+          {
+            "expr": "http_active_connections{job=\"csharp-app\"}",
+            "legendFormat": "C# Active Connections",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Connections",
+            "show": true,
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        }
+      },
+      {
+        "id": 5,
+        "title": "Goroutines vs Threads",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "benchmark_goroutines_active{job=\"go-app\"}",
+            "legendFormat": "Go Goroutines",
+            "refId": "A"
+          },
+          {
+            "expr": "benchmark_threads_active{job=\"csharp-app\"}",
+            "legendFormat": "C# Threads",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Count",
+            "show": true,
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        }
+      },
+      {
+        "id": 6,
+        "title": "Database Connections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "database_connections{job=\"go-app\", state=\"active\"}",
+            "legendFormat": "Go DB Active",
+            "refId": "A"
+          },
+          {
+            "expr": "database_connections{job=\"go-app\", state=\"idle\"}",
+            "legendFormat": "Go DB Idle",
+            "refId": "B"
+          },
+          {
+            "expr": "database_connections_active{job=\"csharp-app\"}",
+            "legendFormat": "C# DB Active",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Connections",
+            "show": true,
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        }
+      },
+      {
+        "id": 7,
+        "title": "Error Rate (Go vs C#)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"go-app\", status_code!~\"2..\"}[5m]) / rate(http_requests_total{job=\"go-app\"}[5m]) * 100",
+            "legendFormat": "Go Error Rate %",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(http_requests_total{job=\"csharp-app\", status_code!~\"2..\"}[5m]) / rate(http_requests_total{job=\"csharp-app\"}[5m]) * 100",
+            "legendFormat": "C# Error Rate %",
+            "refId": "B"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 0,
+          "y": 24
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 1
+                },
+                {
+                  "color": "red",
+                  "value": 5
+                }
+              ]
+            },
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Average Response Time",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(http_request_duration_seconds_sum{job=\"go-app\"}[5m]) / rate(http_request_duration_seconds_count{job=\"go-app\"}[5m])",
+            "legendFormat": "Go Avg Response Time",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(http_request_duration_seconds_sum{job=\"csharp-app\"}[5m]) / rate(http_request_duration_seconds_count{job=\"csharp-app\"}[5m])",
+            "legendFormat": "C# Avg Response Time",
+            "refId": "B"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 6,
+          "y": 24
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 0.1
+                },
+                {
+                  "color": "red",
+                  "value": 0.5
+                }
+              ]
+            },
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Requests per Second",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"go-app\"}[1m])",
+            "legendFormat": "Go RPS",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(http_requests_total{job=\"csharp-app\"}[1m])",
+            "legendFormat": "C# RPS",
+            "refId": "B"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 12,
+          "y": 24
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "value"
+            },
+            "unit": "reqps"
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Memory Efficiency (MB per Request)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "benchmark_memory_usage_bytes{job=\"go-app\", type=\"heap_alloc\"} / rate(http_requests_total{job=\"go-app\"}[5m]) / 1024 / 1024",
+            "legendFormat": "Go Memory/Request",
+            "refId": "A"
+          },
+          {
+            "expr": "benchmark_memory_usage_bytes{job=\"csharp-app\", type=\"working_set\"} / rate(http_requests_total{job=\"csharp-app\"}[5m]) / 1024 / 1024",
+            "legendFormat": "C# Memory/Request",
+            "refId": "B"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 18,
+          "y": 24
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 10
+                },
+                {
+                  "color": "red",
+                  "value": 50
+                }
+              ]
+            },
+            "unit": "MB"
+          }
+        }
+      }
+    ]
+  }
+}
