@@ -1,6 +1,6 @@
 # 🚀 Language Performance Benchmark
 
-Benchmark completo comparando performance entre **Go** e **C#** em cenários reais de produção, medindo latência, throughput, consumo de recursos e eficiência de acesso a dados. A aplicação C# é testada com **Entity Framework** e **Dapper** (micro-ORM) para análise comparativa de ORMs.
+Benchmark comparando performance entre **Golang** e **C#** em cenários reais, medindo latência, throughput, consumo de recursos e eficiência de acesso a dados. A aplicação C# é testada com **Entity Framework** e **Dapper** (micro-ORM) para análise comparativa de ORMs.
 
 ## 🏗️ Arquitetura
 
