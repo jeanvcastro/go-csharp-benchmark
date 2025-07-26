@@ -15,6 +15,7 @@ public class UserRepository : IUserRepository
     public async Task<List<User>> GetUsersAsync(int limit, int offset)
     {
         return await _context.Users
+            .AsNoTracking()
             .OrderByDescending(u => u.CreatedAt)
             .Skip(offset)
             .Take(limit)
@@ -23,7 +24,9 @@ public class UserRepository : IUserRepository
 
     public async Task<User?> GetUserByIdAsync(Guid id)
     {
-        return await _context.Users.FindAsync(id);
+        return await _context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == id);
     }
 
     public async Task<User> CreateUserAsync(CreateUserRequest request)

@@ -15,6 +15,7 @@ public class OrderRepository : IOrderRepository
     public async Task<List<Order>> GetOrdersWithUsersAsync(int limit, int offset)
     {
         return await _context.Orders
+            .AsNoTracking()
             .Include(o => o.User)
             .OrderByDescending(o => o.CreatedAt)
             .Skip(offset)
@@ -25,6 +26,7 @@ public class OrderRepository : IOrderRepository
     public async Task<Order?> GetOrderByIdAsync(Guid id)
     {
         return await _context.Orders
+            .AsNoTracking()
             .Include(o => o.User)
             .Include(o => o.OrderItems)
             .FirstOrDefaultAsync(o => o.Id == id);
@@ -50,25 +52,19 @@ public class OrderRepository : IOrderRepository
                 UpdatedAt = DateTime.UtcNow
             };
 
-            _context.Orders.Add(order);
-            await _context.SaveChangesAsync();
-
-            foreach (var item in request.OrderItems)
+            var orderItems = request.OrderItems.Select(item => new OrderItem
             {
-                var orderItem = new OrderItem
-                {
-                    Id = Guid.NewGuid(),
-                    OrderId = order.Id,
-                    ProductName = item.ProductName,
-                    Quantity = item.Quantity,
-                    UnitPrice = item.UnitPrice,
-                    TotalPrice = item.UnitPrice * item.Quantity,
-                    CreatedAt = DateTime.UtcNow
-                };
+                Id = Guid.NewGuid(),
+                OrderId = order.Id,
+                ProductName = item.ProductName,
+                Quantity = item.Quantity,
+                UnitPrice = item.UnitPrice,
+                TotalPrice = item.UnitPrice * item.Quantity,
+                CreatedAt = DateTime.UtcNow
+            }).ToList();
 
-                _context.OrderItems.Add(orderItem);
-            }
-
+            _context.Orders.Add(order);
+            _context.OrderItems.AddRange(orderItems);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
