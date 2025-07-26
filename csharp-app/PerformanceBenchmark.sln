@@ -2,9 +2,9 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceBenchmark.Data", "src\PerformanceBenchmark.Data\PerformanceBenchmark.Data.csproj", "{6489AFBB-8297-4603-B513-6A66EAD2DD2D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceBenchmark.Metrics", ""src\PerformanceBenchmark.Metrics\PerformanceBenchmark.Metrics.csproj", "{1984FE3C-10C1-48FB-A801-F18B5BB084C8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceBenchmark.Metrics", "src\PerformanceBenchmark.Metrics\PerformanceBenchmark.Metrics.csproj", "{1984FE3C-10C1-48FB-A801-F18B5BB084C8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceBenchmark.Api", ""src\PerformanceBenchmark.Api\PerformanceBenchmark.Api.csproj", "{D7F38039-171A-4583-8638-30753A6A4807}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceBenchmark.Api", "src\PerformanceBenchmark.Api\PerformanceBenchmark.Api.csproj", "{D7F38039-171A-4583-8638-30753A6A4807}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
