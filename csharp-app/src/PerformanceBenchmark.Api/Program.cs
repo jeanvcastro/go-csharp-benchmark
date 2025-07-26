@@ -28,8 +28,14 @@ builder.Services.AddDbContextPool<BenchmarkDbContext>(options =>
     .EnableServiceProviderCaching()
     .EnableThreadSafetyChecks(false));
 
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+// Choose repository implementation:
+// EF Core repositories (slower but full ORM features)
+// builder.Services.AddScoped<IUserRepository, UserRepository>();
+// builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+
+// SQL Direct repositories (faster, similar to Go)
+builder.Services.AddScoped<IUserRepository, SqlUserRepository>();
+builder.Services.AddScoped<IOrderRepository, SqlOrderRepository>();
 
 builder.Services.AddSingleton<SystemMetricsCollector>();
 

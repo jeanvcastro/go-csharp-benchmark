@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using Prometheus;
 
 namespace PerformanceBenchmark.Api.Middleware;
 
@@ -7,21 +6,21 @@ public class MetricsMiddleware
 {
     private readonly RequestDelegate _next;
     
-    private static readonly Histogram HttpRequestDuration = Metrics
+    private static readonly Prometheus.Histogram HttpRequestDuration = Prometheus.Metrics
         .CreateHistogram("http_request_duration_seconds", "Duration of HTTP requests in seconds",
-            new HistogramConfiguration
+            new Prometheus.HistogramConfiguration
             {
                 LabelNames = new[] { "method", "endpoint", "status_code" }
             });
 
-    private static readonly Counter HttpRequestsTotal = Metrics
+    private static readonly Prometheus.Counter HttpRequestsTotal = Prometheus.Metrics
         .CreateCounter("http_requests_total", "Total number of HTTP requests",
-            new CounterConfiguration
+            new Prometheus.CounterConfiguration
             {
                 LabelNames = new[] { "method", "endpoint", "status_code" }
             });
 
-    private static readonly Gauge ActiveConnections = Metrics
+    private static readonly Prometheus.Gauge ActiveConnections = Prometheus.Metrics
         .CreateGauge("http_active_connections", "Number of active HTTP connections");
 
     public MetricsMiddleware(RequestDelegate next)
