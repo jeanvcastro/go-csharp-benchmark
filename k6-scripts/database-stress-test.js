@@ -6,6 +6,17 @@ const errorRate = new Rate('errors');
 const responseTime = new Trend('response_time');
 const databaseOperations = new Counter('database_operations');
 
+// Separate metrics for each application
+const goErrorRate = new Rate('go_db_errors');
+const csharpEfErrorRate = new Rate('csharp_ef_db_errors');
+const csharpDapperErrorRate = new Rate('csharp_dapper_db_errors');
+const goResponseTime = new Trend('go_db_response_time');
+const csharpEfResponseTime = new Trend('csharp_ef_db_response_time');
+const csharpDapperResponseTime = new Trend('csharp_dapper_db_response_time');
+const goDbOperations = new Counter('go_db_operations');
+const csharpEfDbOperations = new Counter('csharp_ef_db_operations');
+const csharpDapperDbOperations = new Counter('csharp_dapper_db_operations');
+
 export const options = {
     scenarios: {
         database_stress: {
@@ -34,6 +45,26 @@ export function setup() {
     return { startTime: Date.now() };
 }
 
+// Helper function to track metrics per app
+function trackMetrics(appChoice, response, operationCount = 1) {
+    const duration = response.timings.duration;
+    const isError = response.status < 200 || response.status >= 400;
+    
+    if (appChoice === 0) {
+        goResponseTime.add(duration);
+        goErrorRate.add(isError);
+        goDbOperations.add(operationCount);
+    } else if (appChoice === 1) {
+        csharpEfResponseTime.add(duration);
+        csharpEfErrorRate.add(isError);
+        csharpEfDbOperations.add(operationCount);
+    } else {
+        csharpDapperResponseTime.add(duration);
+        csharpDapperErrorRate.add(isError);
+        csharpDapperDbOperations.add(operationCount);
+    }
+}
+
 export default function(data) {
     // Randomly select one of the 3 applications
     const appChoice = Math.floor(Math.random() * 3);
@@ -50,22 +81,22 @@ export default function(data) {
     
     if (operation < 0.4) {
         // 40% - Complex read operations with JOINs
-        complexReadOperations(baseUrl);
+        complexReadOperations(baseUrl, appChoice);
     } else if (operation < 0.7) {
         // 30% - Write operations with transactions
-        complexWriteOperations(baseUrl);
+        complexWriteOperations(baseUrl, appChoice);
     } else if (operation < 0.85) {
         // 15% - Batch operations
-        batchOperations(baseUrl);
+        batchOperations(baseUrl, appChoice);
     } else {
         // 15% - Connection pool stress
-        connectionPoolStress(baseUrl);
+        connectionPoolStress(baseUrl, appChoice);
     }
     
     sleep(Math.random() * 0.5); // Variable sleep to simulate real usage
 }
 
-function complexReadOperations(baseUrl) {
+function complexReadOperations(baseUrl, appChoice) {
     const operations = [
         // Get orders with user data (JOIN operation)
         () => {
@@ -109,9 +140,10 @@ function complexReadOperations(baseUrl) {
     
     errorRate.add(response.status !== 200);
     responseTime.add(response.timings.duration);
+    trackMetrics(appChoice, response, 1);
 }
 
-function complexWriteOperations(baseUrl) {
+function complexWriteOperations(baseUrl, appChoice) {
     // Create user with immediate order creation (transaction stress)
     const userData = {
         username: `stressuser${Date.now()}${Math.floor(Math.random() * 10000)}`,
@@ -130,6 +162,7 @@ function complexWriteOperations(baseUrl) {
     databaseOperations.add(1);
     errorRate.add(userResponse.status !== 201);
     responseTime.add(userResponse.timings.duration);
+    trackMetrics(appChoice, userResponse, 1);
     
     if (userResponse.status === 201) {
         let user = null;
@@ -172,6 +205,7 @@ function complexWriteOperations(baseUrl) {
             
             databaseOperations.add(1);
             errorRate.add(orderResponse.status !== 201);
+            trackMetrics(appChoice, orderResponse, 1);
             
             if (orderResponse.status === 201) {
                 try {
@@ -188,7 +222,7 @@ function complexWriteOperations(baseUrl) {
     }
 }
 
-function batchOperations(baseUrl) {
+function batchOperations(baseUrl, appChoice) {
     // Simulate batch processing by rapid-fire requests
     const batchSize = 10;
     const responses = [];
@@ -209,9 +243,10 @@ function batchOperations(baseUrl) {
     
     errorRate.add(errorCount / batchSize);
     responseTime.add(avgResponseTime);
+    trackMetrics(appChoice, responses[0], batchSize);
 }
 
-function connectionPoolStress(baseUrl) {
+function connectionPoolStress(baseUrl, appChoice) {
     // Rapid concurrent requests to stress connection pool
     const concurrent = 20;
     const responses = [];
@@ -234,6 +269,7 @@ function connectionPoolStress(baseUrl) {
     
     errorRate.add((concurrent - successCount) / concurrent);
     responseTime.add(maxResponseTime);
+    trackMetrics(appChoice, responses[0], concurrent);
 }
 
 export function teardown(data) {

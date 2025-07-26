@@ -6,6 +6,17 @@ const errorRate = new Rate('errors');
 const responseTime = new Trend('response_time');
 const memoryOperations = new Counter('memory_operations');
 
+// Separate metrics for each application
+const goErrorRate = new Rate('go_memory_errors');
+const csharpEfErrorRate = new Rate('csharp_ef_memory_errors');
+const csharpDapperErrorRate = new Rate('csharp_dapper_memory_errors');
+const goResponseTime = new Trend('go_memory_response_time');
+const csharpEfResponseTime = new Trend('csharp_ef_memory_response_time');
+const csharpDapperResponseTime = new Trend('csharp_dapper_memory_response_time');
+const goMemoryOperations = new Counter('go_memory_operations');
+const csharpEfMemoryOperations = new Counter('csharp_ef_memory_operations');
+const csharpDapperMemoryOperations = new Counter('csharp_dapper_memory_operations');
+
 export const options = {
     scenarios: {
         memory_pressure: {
@@ -53,6 +64,26 @@ export function setup() {
     };
 }
 
+// Helper function to track metrics per app
+function trackMetrics(appChoice, response, operationCount = 1) {
+    const duration = response.timings.duration;
+    const isError = response.status < 200 || response.status >= 400;
+    
+    if (appChoice === 0) {
+        goResponseTime.add(duration);
+        goErrorRate.add(isError);
+        goMemoryOperations.add(operationCount);
+    } else if (appChoice === 1) {
+        csharpEfResponseTime.add(duration);
+        csharpEfErrorRate.add(isError);
+        csharpEfMemoryOperations.add(operationCount);
+    } else {
+        csharpDapperResponseTime.add(duration);
+        csharpDapperErrorRate.add(isError);
+        csharpDapperMemoryOperations.add(operationCount);
+    }
+}
+
 export default function(data) {
     // Randomly select one of the 3 applications
     const appChoice = Math.floor(Math.random() * 3);
@@ -69,22 +100,22 @@ export default function(data) {
     
     if (operation < 0.3) {
         // 30% - Large payload operations
-        largePayloadOperations(baseUrl, data);
+        largePayloadOperations(baseUrl, data, appChoice);
     } else if (operation < 0.6) {
         // 30% - Rapid allocation/deallocation
-        rapidAllocationOperations(baseUrl, data);
+        rapidAllocationOperations(baseUrl, data, appChoice);
     } else if (operation < 0.8) {
         // 20% - Large result set queries
-        largeResultSetOperations(baseUrl);
+        largeResultSetOperations(baseUrl, appChoice);
     } else {
         // 20% - Memory-intensive batch operations
-        memoryIntensiveBatchOperations(baseUrl, data);
+        memoryIntensiveBatchOperations(baseUrl, data, appChoice);
     }
     
     sleep(Math.random() * 0.2); // Short sleep to maintain pressure
 }
 
-function largePayloadOperations(baseUrl, data) {
+function largePayloadOperations(baseUrl, data, appChoice) {
     // Create users with large payloads
     const largeUserData = {
         username: `largepayload${Date.now()}${Math.floor(Math.random() * 10000)}`,
@@ -104,6 +135,7 @@ function largePayloadOperations(baseUrl, data) {
     memoryOperations.add(1);
     errorRate.add(response.status !== 201);
     responseTime.add(response.timings.duration);
+    trackMetrics(appChoice, response, 1);
     
     if (response.status === 201) {
         let user;
@@ -139,10 +171,11 @@ function largePayloadOperations(baseUrl, data) {
         
         memoryOperations.add(1);
         errorRate.add(orderResponse.status !== 201);
+        trackMetrics(appChoice, orderResponse, 1);
     }
 }
 
-function rapidAllocationOperations(baseUrl, data) {
+function rapidAllocationOperations(baseUrl, data, appChoice) {
     // Rapidly create and query data to stress GC
     const operations = [];
     
@@ -179,9 +212,12 @@ function rapidAllocationOperations(baseUrl, data) {
     
     errorRate.add((operations.length - successCount) / operations.length);
     responseTime.add(avgResponseTime);
+    if (operations.length > 0) {
+        trackMetrics(appChoice, operations[0], operations.length);
+    }
 }
 
-function largeResultSetOperations(baseUrl) {
+function largeResultSetOperations(baseUrl, appChoice) {
     // Query large result sets to stress memory on response processing
     const queries = [
         `${baseUrl}/users?limit=100&offset=0`,
@@ -216,9 +252,12 @@ function largeResultSetOperations(baseUrl) {
     
     errorRate.add(errorCount / responses.length);
     responseTime.add(totalResponseTime / responses.length);
+    if (responses.length > 0) {
+        trackMetrics(appChoice, responses[0], responses.length);
+    }
 }
 
-function memoryIntensiveBatchOperations(baseUrl, data) {
+function memoryIntensiveBatchOperations(baseUrl, data, appChoice) {
     // Batch create multiple users simultaneously
     const batchSize = 15;
     const batch = [];
@@ -258,6 +297,9 @@ function memoryIntensiveBatchOperations(baseUrl, data) {
     
     errorRate.add((batchSize - successCount) / batchSize);
     responseTime.add(avgResponseTime);
+    if (responses.length > 0) {
+        trackMetrics(appChoice, responses[0], batchSize);
+    }
 }
 
 export function teardown(data) {
