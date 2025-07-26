@@ -106,7 +106,7 @@ start_infrastructure() {
     echo "🔍 Verificando aplicação C#..."
     csharp_ready=false
     for i in {1..30}; do
-        if curl -s http://localhost:8083/health > /dev/null 2>&1; then
+        if curl -s http://localhost:8081/health > /dev/null 2>&1; then
             echo "✅ Aplicação C# está pronta"
             csharp_ready=true
             break
@@ -145,7 +145,7 @@ show_access_info() {
     echo "📊 Serviços disponíveis:"
     echo "    • Go API:         http://localhost:8080 (/health, /metrics, /api/v1/users)"
     echo "    • C# Dapper API:  http://localhost:8082 (/health, /metrics, /api/v1/users)"
-    echo "    • C# EF API:      http://localhost:8083 (/health, /metrics, /api/v1/users)"
+    echo "    • C# EF API:      http://localhost:8081 (/health, /metrics, /api/v1/users)"
     echo "    • PostgreSQL: localhost:5432 (benchmark/benchmark_user/benchmark_pass)"
     echo "    • Prometheus: http://localhost:9090"
     echo "    • Grafana:    http://localhost:3000 (admin/admin123)"

@@ -46,7 +46,7 @@ export const options = {
 };
 
 const goBaseUrl = 'http://localhost:8080/api/v1';
-const csharpEfBaseUrl = 'http://localhost:8083/api/v1';
+const csharpEfBaseUrl = 'http://localhost:8081/api/v1';
 const csharpDapperBaseUrl = 'http://localhost:8082/api/v1';
 
 export function setup() {
