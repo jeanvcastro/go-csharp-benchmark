@@ -15,9 +15,15 @@ scrape_configs:
     metrics_path: '/metrics'
     scrape_interval: 5s
 
-  - job_name: 'csharp-app'
+  - job_name: 'csharp-ef-app'
     static_configs:
-      - targets: ['csharp-app:8080']
+      - targets: ['csharp-ef-app:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+
+  - job_name: 'csharp-dapper-app'
+    static_configs:
+      - targets: ['csharp-dapper-app:8080']
     metrics_path: '/metrics'
     scrape_interval: 5s
 
