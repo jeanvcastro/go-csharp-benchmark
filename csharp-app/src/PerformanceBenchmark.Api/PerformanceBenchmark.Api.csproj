@@ -3,6 +3,11 @@
 		<TargetFramework>net9.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<ServerGarbageCollection>true</ServerGarbageCollection>
+		<ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+		<RetainVMGarbageCollection>true</RetainVMGarbageCollection>
+		<TieredCompilation>true</TieredCompilation>
+		<TieredPGO>true</TieredPGO>
 	</PropertyGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\PerformanceBenchmark.Data\PerformanceBenchmark.Data.csproj" />
