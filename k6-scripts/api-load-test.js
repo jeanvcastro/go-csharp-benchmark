@@ -5,11 +5,39 @@ import { Rate, Trend } from 'k6/metrics';
 const errorRate = new Rate('errors');
 const responseTime = new Trend('response_time');
 
+// Separate metrics for each application
+const goErrorRate = new Rate('go_errors');
+const csharpEfErrorRate = new Rate('csharp_ef_errors');
+const csharpDapperErrorRate = new Rate('csharp_dapper_errors');
+const goResponseTime = new Trend('go_response_time');
+const csharpEfResponseTime = new Trend('csharp_ef_response_time');
+const csharpDapperResponseTime = new Trend('csharp_dapper_response_time');
+
+// Helper function to track metrics per app
+function trackMetrics(appChoice, response) {
+    const duration = response.timings.duration;
+    const isError = response.status < 200 || response.status >= 400;
+    
+    if (appChoice === 0) {
+        goResponseTime.add(duration);
+        goErrorRate.add(isError);
+    } else if (appChoice === 1) {
+        csharpEfResponseTime.add(duration);
+        csharpEfErrorRate.add(isError);
+    } else {
+        csharpDapperResponseTime.add(duration);
+        csharpDapperErrorRate.add(isError);
+    }
+}
+
 export const options = {
     stages: [
-        { duration: '1m', target: 100 },   // Ramp up
-        { duration: '5m', target: 1000 },  // Stay at 1000 RPS
-        { duration: '1m', target: 0 },     // Ramp down
+        // { duration: '1m', target: 100 },   // Ramp up
+        // { duration: '5m', target: 1000 },  // Stay at 1000 RPS
+        // { duration: '1m', target: 0 },     // Ramp down
+        { duration: '10s', target: 100 },   // Ramp up
+        { duration: '40s', target: 1000 },  // Stay at 1000 RPS
+        { duration: '10s', target: 0 },     // Ramp down
     ],
     thresholds: {
         http_req_duration: ['p(95)<500'],  // 95% requests under 500ms
@@ -18,7 +46,8 @@ export const options = {
 };
 
 const goBaseUrl = 'http://localhost:8080/api/v1';
-const csharpBaseUrl = 'http://localhost:8081/api/v1';
+const csharpEfBaseUrl = 'http://localhost:8083/api/v1';
+const csharpDapperBaseUrl = 'http://localhost:8082/api/v1';
 
 export function setup() {
     console.log('Setting up optimized dual-app test data...');
@@ -52,7 +81,7 @@ export function setup() {
             full_name: `CSharp Test User ${i}`
         };
         
-        const response = http.post(`${csharpBaseUrl}/users`, JSON.stringify(userData), {
+        const response = http.post(`${csharpEfBaseUrl}/users`, JSON.stringify(userData), {
             headers: { 'Content-Type': 'application/json' }
         });
         
@@ -66,11 +95,23 @@ export function setup() {
 }
 
 export default function(data) {
-    // Use VU ID to determine which app to test (split load evenly)
-    const useGo = __VU % 2 === 0;
-    const baseUrl = useGo ? goBaseUrl : csharpBaseUrl;
-    const users = useGo ? data.goUsers : data.csharpUsers;
-    const appName = useGo ? 'Go' : 'C#';
+    // Use VU ID to determine which app to test (split load evenly between 3 apps)
+    const appChoice = __VU % 3;
+    let baseUrl, users, appName;
+    
+    if (appChoice === 0) {
+        baseUrl = goBaseUrl;
+        users = data.goUsers;
+        appName = 'Go';
+    } else if (appChoice === 1) {
+        baseUrl = csharpEfBaseUrl;
+        users = data.csharpUsers;
+        appName = 'C#-EF';
+    } else {
+        baseUrl = csharpDapperBaseUrl;
+        users = data.csharpUsers;
+        appName = 'C#-Dapper';
+    }
     
     if (!users || users.length === 0) {
         console.warn(`No users available for ${appName}`);
@@ -93,6 +134,9 @@ export default function(data) {
     responseTime.add(usersListResponse.timings.duration);
     errorRate.add(usersListResponse.status !== 200);
     
+    // Track per-app metrics
+    trackMetrics(appChoice, usersListResponse);
+    
     // Test orders list
     const ordersListResponse = http.get(`${baseUrl}/orders?limit=10`);
     check(ordersListResponse, {
@@ -108,6 +152,9 @@ export default function(data) {
     });
     responseTime.add(ordersListResponse.timings.duration);
     errorRate.add(ordersListResponse.status !== 200);
+    
+    // Track per-app metrics
+    trackMetrics(appChoice, ordersListResponse);
     
     // Create user (lower frequency to reduce DB pressure)
     if (Math.random() < 0.3) {  // Only 30% of iterations create users
@@ -135,10 +182,13 @@ export default function(data) {
         responseTime.add(createUserResponse.timings.duration);
         errorRate.add(createUserResponse.status !== 201);
         
+        // Track per-app metrics
+        trackMetrics(appChoice, createUserResponse);
+        
         // Create order for the new user
         if (createUserResponse.status === 201) {
             const createdUser = JSON.parse(createUserResponse.body);
-            const userIdField = useGo ? 'user_id' : 'user_id'; // Both use same field name
+            const userIdField = 'user_id'; // All apps use same field name
             
             const orderData = {
                 [userIdField]: createdUser.id,
@@ -169,6 +219,9 @@ export default function(data) {
             responseTime.add(createOrderResponse.timings.duration);
             errorRate.add(createOrderResponse.status !== 201);
             
+            // Track per-app metrics
+            trackMetrics(appChoice, createOrderResponse);
+            
             // Clean up - delete the created user (lower frequency)
             if (Math.random() < 0.5) {  // Only 50% cleanup to reduce DB load
                 const deleteResponse = http.del(`${baseUrl}/users/${createdUser.id}`);
@@ -177,6 +230,9 @@ export default function(data) {
                 });
                 responseTime.add(deleteResponse.timings.duration);
                 errorRate.add(deleteResponse.status !== 204 && deleteResponse.status !== 404);
+                
+                // Track per-app metrics
+                trackMetrics(appChoice, deleteResponse);
             }
         }
     }

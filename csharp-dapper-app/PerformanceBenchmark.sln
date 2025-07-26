@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceBenchmark.Data", "src\PerformanceBenchmark.Data\PerformanceBenchmark.Data.csproj", "{6489AFBB-8297-4603-B513-6A66EAD2DD2D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceBenchmark.Metrics", "src\PerformanceBenchmark.Metrics\PerformanceBenchmark.Metrics.csproj", "{1984FE3C-10C1-48FB-A801-F18B5BB084C8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceBenchmark.Api", "src\PerformanceBenchmark.Api\PerformanceBenchmark.Api.csproj", "{D7F38039-171A-4583-8638-30753A6A4807}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6489AFBB-8297-4603-B513-6A66EAD2DD2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6489AFBB-8297-4603-B513-6A66EAD2DD2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6489AFBB-8297-4603-B513-6A66EAD2DD2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6489AFBB-8297-4603-B513-6A66EAD2DD2D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1984FE3C-10C1-48FB-A801-F18B5BB084C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1984FE3C-10C1-48FB-A801-F18B5BB084C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1984FE3C-10C1-48FB-A801-F18B5BB084C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1984FE3C-10C1-48FB-A801-F18B5BB084C8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D7F38039-171A-4583-8638-30753A6A4807}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D7F38039-171A-4583-8638-30753A6A4807}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D7F38039-171A-4583-8638-30753A6A4807}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D7F38039-171A-4583-8638-30753A6A4807}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

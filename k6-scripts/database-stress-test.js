@@ -23,7 +23,8 @@ export const options = {
 };
 
 const goBaseUrl = 'http://localhost:8080/api/v1';
-const csharpBaseUrl = 'http://localhost:8081/api/v1';
+const csharpEfBaseUrl = 'http://localhost:8083/api/v1';
+const csharpDapperBaseUrl = 'http://localhost:8082/api/v1';
 
 let createdUsers = [];
 let createdOrders = [];
@@ -34,7 +35,17 @@ export function setup() {
 }
 
 export default function(data) {
-    const baseUrl = Math.random() < 0.5 ? goBaseUrl : csharpBaseUrl;
+    // Randomly select one of the 3 applications
+    const appChoice = Math.floor(Math.random() * 3);
+    let baseUrl;
+    
+    if (appChoice === 0) {
+        baseUrl = goBaseUrl;
+    } else if (appChoice === 1) {
+        baseUrl = csharpEfBaseUrl;
+    } else {
+        baseUrl = csharpDapperBaseUrl;
+    }
     const operation = Math.random();
     
     if (operation < 0.4) {

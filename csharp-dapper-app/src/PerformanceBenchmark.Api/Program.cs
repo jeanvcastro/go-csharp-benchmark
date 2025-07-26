@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using PerformanceBenchmark.Api.Middleware;
+﻿using PerformanceBenchmark.Api.Middleware;
 using PerformanceBenchmark.Data;
 using PerformanceBenchmark.Metrics;
 using Prometheus;
@@ -16,21 +15,9 @@ if (builder.Environment.IsDevelopment())
     builder.Services.AddSwaggerGen();
 }
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-                       ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-
-builder.Services.AddDbContextPool<BenchmarkDbContext>(options =>
-    options.UseNpgsql(connectionString, npgsqlOptions =>
-    {
-        npgsqlOptions.CommandTimeout(30);
-    })
-    .EnableSensitiveDataLogging(false)
-    .EnableServiceProviderCaching()
-    .EnableThreadSafetyChecks(false));
-
-// EF Core repositories
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+// SQL Direct repositories with Dapper (no EF)
+builder.Services.AddScoped<IUserRepository, SqlUserRepository>();
+builder.Services.AddScoped<IOrderRepository, SqlOrderRepository>();
 
 builder.Services.AddSingleton<SystemMetricsCollector>();
 
