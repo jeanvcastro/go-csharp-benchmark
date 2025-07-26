@@ -10,6 +10,7 @@ from datetime import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 
 def load_k6_results(results_dir):
     """Load K6 JSON results from the benchmark session"""
@@ -28,9 +29,20 @@ def load_k6_results(results_dir):
             with open(json_file, 'r') as f:
                 lines = f.readlines()
                 
-            # Parse K6 JSON output (one JSON object per line)
+            # Parse K6 JSON output (one JSON object per line) - with sampling for large files
             metrics_data = []
-            for line in lines:
+            total_lines = len(lines)
+            
+            # If file is large (>50MB), sample every 10th line for performance
+            step = 10 if json_file.stat().st_size > 50_000_000 else 1
+            
+            if step > 1:
+                print(f"  📉 Large file detected, sampling every {step} lines")
+            
+            for i, line in enumerate(lines):
+                if i % step != 0:  # Skip lines based on sampling
+                    continue
+                    
                 if line.strip():
                     try:
                         data = json.loads(line)
@@ -47,57 +59,110 @@ def load_k6_results(results_dir):
     
     return k6_results
 
+def calculate_stats(times):
+    """Calculate statistical metrics for response times"""
+    if not times:
+        return {'count': 0, 'error': 'No data'}
+    
+    return {
+        'count': len(times),
+        'min': min(times),
+        'max': max(times),
+        'mean': statistics.mean(times),
+        'median': statistics.median(times),
+        'p95': statistics.quantiles(times, n=20)[18] if len(times) > 20 else max(times),
+        'p99': statistics.quantiles(times, n=100)[98] if len(times) > 100 else max(times)
+    }
+
 def analyze_response_times(k6_results):
-    """Analyze response times from K6 results"""
+    """Analyze response times from K6 results by application"""
     analysis = {}
     
     for test_name, metrics in k6_results.items():
-        response_times = []
+        # Analyze by application using the new separate metrics
+        app_metrics = {
+            'go': [],
+            'csharp_ef': [],
+            'csharp_dapper': []
+        }
         
         for metric in metrics:
-            if (metric.get('metric') == 'http_req_duration' and 
-                'data' in metric and 'value' in metric['data']):
-                response_times.append(metric['data']['value'])
+            metric_name = metric.get('metric', '')
+            value = metric.get('data', {}).get('value')
+            
+            if value is None:
+                continue
+            
+            # Application-specific response times
+            if 'go_response_time' in metric_name or 'go_db_response_time' in metric_name or 'go_memory_response_time' in metric_name:
+                app_metrics['go'].append(value)
+            elif 'csharp_ef_response_time' in metric_name or 'csharp_ef_db_response_time' in metric_name or 'csharp_ef_memory_response_time' in metric_name:
+                app_metrics['csharp_ef'].append(value)
+            elif 'csharp_dapper_response_time' in metric_name or 'csharp_dapper_db_response_time' in metric_name or 'csharp_dapper_memory_response_time' in metric_name:
+                app_metrics['csharp_dapper'].append(value)
         
-        if response_times:
-            analysis[test_name] = {
-                'count': len(response_times),
-                'min': min(response_times),
-                'max': max(response_times),
-                'mean': statistics.mean(response_times),
-                'median': statistics.median(response_times),
-                'p95': statistics.quantiles(response_times, n=20)[18] if len(response_times) > 20 else max(response_times),
-                'p99': statistics.quantiles(response_times, n=100)[98] if len(response_times) > 100 else max(response_times)
-            }
-        else:
-            analysis[test_name] = {'count': 0, 'error': 'No response time data found'}
+        # Calculate stats per-app
+        test_analysis = {}
+        for app, times in app_metrics.items():
+            test_analysis[app] = calculate_stats(times)
+        
+        analysis[test_name] = test_analysis
     
     return analysis
 
 def analyze_throughput(k6_results):
-    """Analyze throughput metrics"""
+    """Analyze throughput metrics by application"""
     analysis = {}
     
     for test_name, metrics in k6_results.items():
-        requests = []
-        errors = []
+        # Per-app metrics
+        app_errors = {
+            'go': 0,
+            'csharp_ef': 0,
+            'csharp_dapper': 0
+        }
+        
+        app_operations = {
+            'go': 0,
+            'csharp_ef': 0,
+            'csharp_dapper': 0
+        }
         
         for metric in metrics:
-            if metric.get('metric') == 'http_reqs':
-                requests.append(metric['data']['value'])
-            elif metric.get('metric') == 'http_req_failed' and metric['data']['value'] > 0:
-                errors.append(metric['data']['value'])
+            metric_name = metric.get('metric', '')
+            value = metric.get('data', {}).get('value', 0)
+            
+            # App-specific error rates
+            if 'go_errors' in metric_name or 'go_db_errors' in metric_name or 'go_memory_errors' in metric_name:
+                app_errors['go'] += value
+            elif 'csharp_ef_errors' in metric_name or 'csharp_ef_db_errors' in metric_name or 'csharp_ef_memory_errors' in metric_name:
+                app_errors['csharp_ef'] += value
+            elif 'csharp_dapper_errors' in metric_name or 'csharp_dapper_db_errors' in metric_name or 'csharp_dapper_memory_errors' in metric_name:
+                app_errors['csharp_dapper'] += value
+            
+            # App-specific operations
+            elif 'go_operations' in metric_name or 'go_db_operations' in metric_name or 'go_memory_operations' in metric_name:
+                app_operations['go'] += value
+            elif 'csharp_ef_operations' in metric_name or 'csharp_ef_db_operations' in metric_name or 'csharp_ef_memory_operations' in metric_name:
+                app_operations['csharp_ef'] += value
+            elif 'csharp_dapper_operations' in metric_name or 'csharp_dapper_db_operations' in metric_name or 'csharp_dapper_memory_operations' in metric_name:
+                app_operations['csharp_dapper'] += value
         
-        total_requests = sum(requests) if requests else 0
-        total_errors = len(errors)
-        error_rate = (total_errors / total_requests * 100) if total_requests > 0 else 0
+        test_analysis = {}
         
-        analysis[test_name] = {
-            'total_requests': total_requests,
-            'total_errors': total_errors,
-            'error_rate_percent': error_rate,
-            'rps': total_requests / 300 if total_requests > 0 else 0  # Assuming ~5min tests
-        }
+        # Add per-app analysis
+        for app in ['go', 'csharp_ef', 'csharp_dapper']:
+            operations = app_operations[app]
+            errors = app_errors[app]
+            
+            test_analysis[app] = {
+                'operations': operations,
+                'errors': errors,
+                'error_rate_percent': (errors / operations * 100) if operations > 0 else 0,
+                'ops_per_sec': operations / 300 if operations > 0 else 0
+            }
+        
+        analysis[test_name] = test_analysis
     
     return analysis
 
@@ -152,44 +217,73 @@ def generate_comparison_report(response_times, throughput, prometheus_data, outp
     report_file = Path(output_dir) / "benchmark_comparison_report.md"
     
     with open(report_file, 'w') as f:
-        f.write("# Go vs C# Performance Benchmark Report\\n\\n")
-        f.write(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\\n\\n")
+        f.write("# Go vs C# Performance Benchmark Report\n\n")
+        f.write(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
         
-        # Response Times Analysis
-        f.write("## Response Time Analysis\\n\\n")
-        f.write("| Test | Count | Min (ms) | Mean (ms) | Median (ms) | P95 (ms) | P99 (ms) | Max (ms) |\\n")
-        f.write("|------|-------|----------|-----------|-------------|----------|----------|----------|\\n")
+        # Performance Summary by Application
+        f.write("## 📊 Performance Summary by Application\n\n")
         
-        for test_name, stats in response_times.items():
-            if 'error' not in stats:
-                f.write(f"| {test_name} | {stats['count']} | "
-                       f"{stats['min']:.2f} | {stats['mean']:.2f} | {stats['median']:.2f} | "
-                       f"{stats['p95']:.2f} | {stats['p99']:.2f} | {stats['max']:.2f} |\\n")
+        apps = ['go', 'csharp_ef', 'csharp_dapper']
+        app_names = {'go': 'Go', 'csharp_ef': 'C# Entity Framework', 'csharp_dapper': 'C# Dapper'}
         
-        f.write("\\n")
+        for app in apps:
+            f.write(f"### {app_names[app]}\n\n")
+            
+            # Response times table for this app
+            f.write("#### Response Times\n\n")
+            f.write("| Test | Count | Min (ms) | Mean (ms) | Median (ms) | P95 (ms) | P99 (ms) | Max (ms) |\n")
+            f.write("|------|-------|----------|-----------|-------------|----------|----------|----------|\n")
+            
+            for test_name, test_data in response_times.items():
+                if app in test_data and 'error' not in test_data[app]:
+                    stats = test_data[app]
+                    f.write(f"| {test_name} | {stats['count']} | "
+                           f"{stats['min']:.2f} | {stats['mean']:.2f} | {stats['median']:.2f} | "
+                           f"{stats['p95']:.2f} | {stats['p99']:.2f} | {stats['max']:.2f} |\n")
+            
+            # Throughput table for this app
+            f.write("\n#### Throughput\n\n")
+            f.write("| Test | Operations | Errors | Error Rate (%) | Ops/sec |\n")
+            f.write("|------|------------|--------|----------------|---------|\n")
+            
+            for test_name, test_data in throughput.items():
+                if app in test_data:
+                    stats = test_data[app]
+                    f.write(f"| {test_name} | {stats['operations']} | {stats['errors']} | "
+                           f"{stats['error_rate_percent']:.2f} | {stats['ops_per_sec']:.2f} |\n")
+            
+            f.write("\n")
         
-        # Throughput Analysis
-        f.write("## Throughput Analysis\\n\\n")
-        f.write("| Test | Total Requests | Errors | Error Rate (%) | RPS |\\n")
-        f.write("|------|----------------|--------|----------------|-----|\\n")
+        # Cross-Application Comparison
+        f.write("## 🏆 Cross-Application Comparison\n\n")
         
-        for test_name, stats in throughput.items():
-            f.write(f"| {test_name} | {stats['total_requests']} | {stats['total_errors']} | "
-                   f"{stats['error_rate_percent']:.2f} | {stats['rps']:.2f} |\\n")
-        
-        f.write("\\n")
+        for test_name in response_times.keys():
+            f.write(f"### {test_name.replace('-', ' ').title()}\n\n")
+            
+            # Response time comparison
+            f.write("#### Response Times\n\n")
+            f.write("| Application | Mean (ms) | P95 (ms) | Operations |\n")
+            f.write("|-------------|-----------|----------|-----------|\n")
+            
+            for app in apps:
+                if app in response_times[test_name] and 'error' not in response_times[test_name][app]:
+                    rt_stats = response_times[test_name][app]
+                    th_stats = throughput[test_name][app]
+                    f.write(f"| {app_names[app]} | {rt_stats['mean']:.2f} | {rt_stats['p95']:.2f} | {th_stats['operations']} |\n")
+            
+            f.write("\n")
         
         # Application Metrics Comparison
         if prometheus_data:
-            f.write("## Application Metrics Comparison\\n\\n")
+            f.write("## 💾 Application Metrics Comparison\n\n")
             
             if 'go' in prometheus_data and 'csharp' in prometheus_data:
                 go_metrics = prometheus_data['go']
                 csharp_metrics = prometheus_data['csharp']
                 
                 # Memory usage comparison
-                f.write("### Memory Usage\\n\\n")
-                f.write("| Metric | Go | C# |\\n")
+                f.write("### Memory Usage\n\n")
+                f.write("| Metric | Go | C# |\n")
                 f.write("|--------|----|----|\\n")
                 
                 # Look for memory-related metrics
@@ -197,36 +291,58 @@ def generate_comparison_report(response_times, throughput, prometheus_data, outp
                 for metric in memory_metrics:
                     go_val = next((v for k, v in go_metrics.items() if metric in k), 'N/A')
                     cs_val = next((v for k, v in csharp_metrics.items() if metric in k), 'N/A')
-                    f.write(f"| {metric} | {go_val} | {cs_val} |\\n")
+                    
+                    # Format memory values nicely
+                    if isinstance(go_val, (int, float)):
+                        go_val = f"{go_val/1024/1024:.1f} MB"
+                    if isinstance(cs_val, (int, float)):
+                        cs_val = f"{cs_val/1024/1024:.1f} MB"
+                    
+                    f.write(f"| {metric.replace('_', ' ').title()} | {go_val} | {cs_val} |\n")
                 
-                f.write("\\n")
+                f.write("\n")
         
         # Summary and Recommendations
-        f.write("## Summary and Recommendations\\n\\n")
-        f.write("### Key Findings\\n\\n")
+        f.write("## 🎯 Key Findings & Recommendations\n\n")
         
-        # Calculate overall performance
-        if response_times:
-            avg_response_times = {test: stats.get('mean', 0) for test, stats in response_times.items() if 'error' not in stats}
-            if avg_response_times:
-                best_test = min(avg_response_times, key=avg_response_times.get)
-                f.write(f"- **Fastest Response Time**: {best_test} ({avg_response_times[best_test]:.2f}ms average)\\n")
+        # Find best performing app per test
+        f.write("### Performance Winners\n\n")
         
-        if throughput:
-            total_rps = {test: stats.get('rps', 0) for test, stats in throughput.items()}
-            if total_rps:
-                best_throughput = max(total_rps, key=total_rps.get)
-                f.write(f"- **Highest Throughput**: {best_throughput} ({total_rps[best_throughput]:.2f} RPS)\\n")
+        for test_name in response_times.keys():
+            best_app = None
+            best_mean = float('inf')
+            
+            for app in apps:
+                if app in response_times[test_name] and 'error' not in response_times[test_name][app]:
+                    mean_time = response_times[test_name][app]['mean']
+                    if mean_time < best_mean:
+                        best_mean = mean_time
+                        best_app = app
+            
+            if best_app:
+                f.write(f"- **{test_name.replace('-', ' ').title()}**: {app_names[best_app]} ({best_mean:.2f}ms avg)\n")
         
-        f.write("\\n### Recommendations\\n\\n")
-        f.write("Based on the benchmark results:\\n\\n")
-        f.write("1. Review application metrics in Grafana for detailed insights\\n")
-        f.write("2. Analyze memory usage patterns and garbage collection behavior\\n")
-        f.write("3. Consider connection pool tuning based on database stress test results\\n")
-        f.write("4. Monitor error rates and investigate any performance degradation\\n")
+        # Error rate analysis
+        f.write("\n### Error Rate Analysis\n\n")
+        for test_name in throughput.keys():
+            f.write(f"**{test_name.replace('-', ' ').title()}**:\n\n")
+            for app in apps:
+                if app in throughput[test_name]:
+                    error_rate = throughput[test_name][app]['error_rate_percent']
+                    status = "✅" if error_rate < 1 else "⚠️" if error_rate < 5 else "❌"
+                    f.write(f"- {status} {app_names[app]}: {error_rate:.2f}% error rate\n")
+            f.write("\n")
         
-        f.write("\\n---\\n\\n")
-        f.write("*This report was generated automatically by the benchmark analysis script.*\\n")
+        f.write("### Recommendations\n\n")
+        f.write("Based on the benchmark results:\n\n")
+        f.write("1. 📊 **Monitor Grafana dashboards** for real-time performance insights\n")
+        f.write("2. 🧠 **Analyze memory patterns** - C# shows higher memory usage\n")
+        f.write("3. 🔧 **Tune connection pools** based on database stress results\n")
+        f.write("4. 🚨 **Investigate high error rates** in memory pressure tests\n")
+        f.write("5. ⚡ **Consider caching strategies** for frequently accessed data\n")
+        
+        f.write("\n---\n\n")
+        f.write("*📈 This report was generated automatically by the benchmark analysis script.*\n")
     
     print(f"✅ Comparison report generated: {report_file}")
     return report_file
@@ -236,72 +352,104 @@ def create_visualizations(response_times, throughput, output_dir):
     try:
         import matplotlib.pyplot as plt
         import seaborn as sns
+        import numpy as np
         
         plt.style.use('seaborn-v0_8')
-        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
+        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(20, 16))
         
-        # Response Time Comparison
-        if response_times:
-            tests = list(response_times.keys())
-            means = [stats.get('mean', 0) for stats in response_times.values() if 'error' not in stats]
-            p95s = [stats.get('p95', 0) for stats in response_times.values() if 'error' not in stats]
+        apps = ['go', 'csharp_ef', 'csharp_dapper']
+        app_names = {'go': 'Go', 'csharp_ef': 'C# EF', 'csharp_dapper': 'C# Dapper'}
+        colors = {'go': '#00ADD8', 'csharp_ef': '#512BD4', 'csharp_dapper': '#68217A'}
+        
+        # 1. Response Time Comparison by App and Test
+        test_names = list(response_times.keys())
+        x = np.arange(len(test_names))
+        width = 0.25
+        
+        for i, app in enumerate(apps):
+            means = []
+            for test in test_names:
+                if app in response_times[test] and 'error' not in response_times[test][app]:
+                    means.append(response_times[test][app]['mean'])
+                else:
+                    means.append(0)
             
-            if means and p95s:
-                x = range(len(tests))
-                ax1.bar([i - 0.2 for i in x], means, 0.4, label='Mean', alpha=0.8)
-                ax1.bar([i + 0.2 for i in x], p95s, 0.4, label='P95', alpha=0.8)
-                ax1.set_xlabel('Test Cases')
-                ax1.set_ylabel('Response Time (ms)')
-                ax1.set_title('Response Time Comparison')
-                ax1.set_xticks(x)
-                ax1.set_xticklabels(tests, rotation=45)
-                ax1.legend()
+            ax1.bar(x + i * width, means, width, label=app_names[app], color=colors[app], alpha=0.8)
         
-        # Throughput Comparison
-        if throughput:
-            tests = list(throughput.keys())
-            rps_values = [stats.get('rps', 0) for stats in throughput.values()]
+        ax1.set_xlabel('Test Types')
+        ax1.set_ylabel('Mean Response Time (ms)')
+        ax1.set_title('Response Time Comparison by Application')
+        ax1.set_xticks(x + width)
+        ax1.set_xticklabels([t.replace('-', '\n') for t in test_names])
+        ax1.legend()
+        ax1.set_yscale('log')  # Log scale for better visualization
+        
+        # 2. Operations per Second Comparison
+        for i, app in enumerate(apps):
+            ops_per_sec = []
+            for test in test_names:
+                if app in throughput[test]:
+                    ops_per_sec.append(throughput[test][app]['ops_per_sec'])
+                else:
+                    ops_per_sec.append(0)
             
-            if rps_values:
-                ax2.bar(tests, rps_values, alpha=0.8, color='green')
-                ax2.set_xlabel('Test Cases')
-                ax2.set_ylabel('Requests per Second')
-                ax2.set_title('Throughput Comparison')
-                ax2.tick_params(axis='x', rotation=45)
+            ax2.bar(x + i * width, ops_per_sec, width, label=app_names[app], color=colors[app], alpha=0.8)
         
-        # Error Rate Comparison
-        if throughput:
-            tests = list(throughput.keys())
-            error_rates = [stats.get('error_rate_percent', 0) for stats in throughput.values()]
+        ax2.set_xlabel('Test Types')
+        ax2.set_ylabel('Operations per Second')
+        ax2.set_title('Throughput Comparison by Application')
+        ax2.set_xticks(x + width)
+        ax2.set_xticklabels([t.replace('-', '\n') for t in test_names])
+        ax2.legend()
+        
+        # 3. Error Rate Comparison
+        for i, app in enumerate(apps):
+            error_rates = []
+            for test in test_names:
+                if app in throughput[test]:
+                    error_rates.append(throughput[test][app]['error_rate_percent'])
+                else:
+                    error_rates.append(0)
             
-            if error_rates:
-                ax3.bar(tests, error_rates, alpha=0.8, color='red')
-                ax3.set_xlabel('Test Cases')
-                ax3.set_ylabel('Error Rate (%)')
-                ax3.set_title('Error Rate Comparison')
-                ax3.tick_params(axis='x', rotation=45)
+            ax3.bar(x + i * width, error_rates, width, label=app_names[app], color=colors[app], alpha=0.8)
         
-        # Request Count Comparison
-        if throughput:
-            tests = list(throughput.keys())
-            req_counts = [stats.get('total_requests', 0) for stats in throughput.values()]
+        ax3.set_xlabel('Test Types')
+        ax3.set_ylabel('Error Rate (%)')
+        ax3.set_title('Error Rate Comparison by Application')
+        ax3.set_xticks(x + width)
+        ax3.set_xticklabels([t.replace('-', '\n') for t in test_names])
+        ax3.legend()
+        
+        # 4. P95 Response Time Comparison (More detailed view)
+        for i, app in enumerate(apps):
+            p95_times = []
+            for test in test_names:
+                if app in response_times[test] and 'error' not in response_times[test][app]:
+                    p95_times.append(response_times[test][app]['p95'])
+                else:
+                    p95_times.append(0)
             
-            if req_counts:
-                ax4.bar(tests, req_counts, alpha=0.8, color='blue')
-                ax4.set_xlabel('Test Cases')
-                ax4.set_ylabel('Total Requests')
-                ax4.set_title('Total Requests Comparison')
-                ax4.tick_params(axis='x', rotation=45)
+            ax4.bar(x + i * width, p95_times, width, label=app_names[app], color=colors[app], alpha=0.8)
         
-        plt.tight_layout()
+        ax4.set_xlabel('Test Types')
+        ax4.set_ylabel('P95 Response Time (ms)')
+        ax4.set_title('P95 Response Time Comparison by Application')
+        ax4.set_xticks(x + width)
+        ax4.set_xticklabels([t.replace('-', '\n') for t in test_names])
+        ax4.legend()
+        ax4.set_yscale('log')  # Log scale for better visualization
+        
+        plt.tight_layout(pad=3.0)
+        plt.suptitle('Go vs C# Performance Benchmark Results', fontsize=16, y=0.98)
+        
         chart_file = Path(output_dir) / "performance_comparison_charts.png"
-        plt.savefig(chart_file, dpi=300, bbox_inches='tight')
+        plt.savefig(chart_file, dpi=300, bbox_inches='tight', facecolor='white')
         plt.close()
         
         print(f"✅ Performance charts generated: {chart_file}")
         
-    except ImportError:
-        print("⚠️  matplotlib/seaborn not available, skipping chart generation")
+    except ImportError as e:
+        print(f"⚠️ matplotlib/seaborn not available, skipping chart generation: {e}")
     except Exception as e:
         print(f"❌ Error generating charts: {e}")
 
